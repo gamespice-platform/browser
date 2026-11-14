@@ -1,5 +1,3 @@
-# dot-browser
-
 A server browser for Godot 4.7+: a query client and a list model. It asks game servers what they are, then gives you sources, filters, sorting, favourites and history. Part of the [dot-*](https://github.com/modcommunity) family. It needs only [dot-core](https://github.com/modcommunity/dot-core).
 
 It speaks three protocols, so one browser can list any server:
