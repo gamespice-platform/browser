@@ -26,7 +26,7 @@ extends Node
 ## [/codeblock]
 
 const SECTIONS := 12
-const CHECKS := 139
+const CHECKS := 141
 
 ## Produced by dot-server's DotQueryProtocol.build_request(TYPE_QUERY, 7,
 ## 0x0123456789abcdef, {"sections": ["info"]}, true).
@@ -791,6 +791,13 @@ func _test_over_a_socket() -> void:
 	_check(many.ok, "a refresh of eight servers, most of them dead, finishes")
 	_check(not browser.is_refreshing(), "and leaves nothing outstanding")
 	_check(int(many.value) >= 1, "with the one live server still online")
+
+	browser.concurrency = -1
+	var neg: DotResult = await browser.refresh_known()
+	_check(not neg.ok, "a negative concurrency is refused")
+	browser.concurrency = 0
+	var unl: DotResult = await browser.refresh_known()
+	_check(unl.ok and not browser.is_refreshing(), "concurrency 0 (unlimited) refreshes everything at once")
 
 	browser.queue_free()
 	server.stop()

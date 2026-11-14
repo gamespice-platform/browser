@@ -56,7 +56,13 @@ signal source_failed(source: StringName, error: DotError)
 ## addresses at once, which looks like a scan to anything watching a home
 ## connection — and a list of a thousand servers at full parallelism will lose
 ## replies to the receive buffer long before it saturates a link.
-@export_range(1, 64, 1) var concurrency: int = 8
+##
+## Default 8, 0 = unlimited (every target at once). Negative is refused by [method refresh];
+## past [constant CONCURRENCY_WARN] it works but warns once per refresh.
+@export_range(0, 64, 1, "or_greater") var concurrency: int = 8
+
+## Above this, [member concurrency] is allowed but a refresh warns.
+const CONCURRENCY_WARN := 256
 
 ## Milliseconds to wait for each reply.
 @export_range(200, 15000, 100) var timeout_ms: int = 2500
@@ -205,6 +211,10 @@ func refresh() -> DotResult:
 			DotError.CODE_STATE, "A refresh is already running."
 		)
 
+	var bad := _check_concurrency()
+	if not bad.ok:
+		return bad
+
 	for source in _sources:
 		if not source.enabled:
 			continue
@@ -234,6 +244,10 @@ func refresh_known() -> DotResult:
 
 	if _refreshing:
 		return DotResult.fail(DotError.CODE_STATE, "A refresh is already running.")
+
+	var bad := _check_concurrency()
+	if not bad.ok:
+		return bad
 
 	_pending.clear()
 	for key in _order:
@@ -311,8 +325,19 @@ func _process(_delta: float) -> void:
 		refresh_finished.emit(_online_count(), _refresh_total)
 
 
+func _check_concurrency() -> DotResult:
+	if concurrency < 0:
+		return DotResult.fail(
+			DotError.CODE_INVALID, "concurrency %d is negative; 0 means unlimited." % concurrency
+		)
+	if concurrency > CONCURRENCY_WARN or concurrency == 0:
+		push_warning("DotBrowser: concurrency %s sends a burst of UDP that can look like a scan and lose replies." % (
+			"unlimited" if concurrency == 0 else str(concurrency)))
+	return DotResult.success(null)
+
+
 func _fill_active() -> void:
-	while _active.size() < concurrency and not _pending.is_empty():
+	while (concurrency == 0 or _active.size() < concurrency) and not _pending.is_empty():
 		var target: DotBrowserTarget = _pending.pop_front()
 		var entry: DotBrowserEntry = _entries[target.key()]
 		_begin(entry, sections)

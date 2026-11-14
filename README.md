@@ -60,7 +60,7 @@ The defaults are shown.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `concurrency` | 8 | Queries in flight at once during a refresh. The inspector slider runs 1 to 64. |
+| `concurrency` | 8 | Queries in flight at once during a refresh. Default 8, 0 = unlimited; negative is refused, and above 256 (or 0) a refresh warns. |
 | `timeout_ms` | 2500 | How long to wait for a server. |
 | `retries` | 1 | Extra tries after a timeout. |
 
