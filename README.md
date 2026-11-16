@@ -49,7 +49,7 @@ A browser knows how to ask a server what it is. A source says which servers exis
 | Source | What it gives |
 | --- | --- |
 | `DotBrowserSourceList` | Addresses typed in, or a JSON file you ship. |
-| `DotBrowserSourceBackbone` | A site's server listing (`GET /api/content/server/list`), read anonymously over HTTP. Off until `DotBrowserBackboneConfig.backbone_url` is set (`--browser-backbone-url` or `DOT_BROWSER_BACKBONE_URL`). |
+| `DotBrowserSourceBackbone` | A site's server listing (`GET /api/content/server/list`), read anonymously over HTTP. Off until `DotBrowserBackboneConfig.backbone_url` is set (`--browser-backbone-url` or `GS_BROWSER_BACKBONE_URL`). |
 | Your own | Subclass `DotBrowserSource` and return targets. |
 
 ## Settings

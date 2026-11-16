@@ -5,7 +5,7 @@ extends DotConfig
 ##
 ## [codeblock]
 ## godot --path . -- --browser-backbone-url=https://api.example.com --browser-app=arena
-## DOT_BROWSER_BACKBONE_URL=https://api.example.com godot --path .
+## GS_BROWSER_BACKBONE_URL=https://api.example.com godot --path .
 ## [/codeblock]
 ##
 ## [b]Off unless a URL is set.[/b] The default is empty rather than the public site, because
