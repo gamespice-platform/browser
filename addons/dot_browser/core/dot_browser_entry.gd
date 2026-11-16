@@ -261,6 +261,26 @@ static func _clip(text: String) -> String:
 	return text.substr(0, MAX_TEXT)
 
 
+## A row for a list view: the keys dot-ui's DotServerList reads, plus a few it may grow
+## into. Plain data so dot-browser still names nothing outside dot-core. [code]players[/code]
+## is humans; bots are their own key, for docs/design.md's reason.
+func to_row() -> Dictionary:
+	return {
+		"address": join_address(),
+		"name": name,
+		"map": map,
+		"game": game,
+		"players": players,
+		"bots": bots,
+		"max_players": max_players,
+		"ping_ms": ping_ms,
+		"status": status_name(),
+		"secure": secure,
+		"password": needs_password(),
+		"full": is_full(),
+	}
+
+
 ## The persisted form, for favourites and history. Not a query response.
 func to_dictionary() -> Dictionary:
 	var out := {

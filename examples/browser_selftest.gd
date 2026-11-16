@@ -26,7 +26,7 @@ extends Node
 ## [/codeblock]
 
 const SECTIONS := 12
-const CHECKS := 141
+const CHECKS := 143
 
 ## Produced by dot-server's DotQueryProtocol.build_request(TYPE_QUERY, 7,
 ## 0x0123456789abcdef, {"sections": ["info"]}, true).
@@ -414,6 +414,11 @@ func _test_entries() -> void:
 	var long := DotBrowserEntry.of(DotBrowserTarget.make("h", 1))
 	long.apply_dqp({"sections": {"info": {"name": "x".repeat(9000)}}})
 	_check(long.name.length() <= DotBrowserEntry.MAX_TEXT, "a hostname from a stranger is capped on the way in")
+
+	var row := entry.to_row()
+	_check(row["address"] == entry.join_address() and row["name"] == name, "a row for a list view carries the join address and name")
+	_check(row["status"] == "offline" and row["players"] == 8 and row["bots"] == 4,
+		"its status by name, and humans and bots apart")
 
 	var saved := DotBrowserEntry.from_dictionary(entry.to_dictionary())
 	_check(saved.ok, "an entry round-trips through its saved form")

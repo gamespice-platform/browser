@@ -61,7 +61,7 @@ A listing hands out names as well as IPs (a server whose team addresses it by ho
 
 ## Deliberately not here
 
-- **A window.** No scene, no table, no theme. `DotBrowserEntry.describe()` gives you a row and dot-ui gives you somewhere to put it.
+- **A window.** No scene, no table, no theme. `DotBrowserEntry.to_row()` gives you a row as plain data and dot-ui's `DotServerList` (API 24) gives you somewhere to put it: `list.set_rows(entries.map(func(e): return e.to_row()))`. `describe()` is the one-line text form.
 - **A master server.** Nothing announces itself to a list here. The site listing above is the nearest thing, and a server reaches it by being listed on the site, not by anything in this addon.
 - **LAN discovery.** DQP has no broadcast form, and a subnet sweep is a different thing with different consequences. A `DotBrowserSource` that sweeps is twenty lines and belongs to whoever wants it.
 - **Connecting.** A browser produces an address. What a game does with one is dot-server's client link, and pretending otherwise would put a transport in here.
