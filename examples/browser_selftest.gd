@@ -373,7 +373,7 @@ func _test_entries() -> void:
 		"rev": 12,
 		"sections": {
 			"info": {
-				"name": "A dot server", "map": "dm_atrium", "game_id": "arena",
+				"name": "A dot server", "map": "dm_atrium", "game_id": "fc",
 				"players": 8, "bots": 4, "connecting": 2, "max_players": 32,
 				"tags": ["eu", "casual"], "visibility": "public",
 			},
@@ -631,7 +631,7 @@ func _test_backbone() -> void:
 		{
 			"data": [
 				{"id": 3, "host": "203.0.113.7", "port": 6060, "queryPort": null,
-					"protocols": ["A2S"], "app": {"id": 70, "url": "arena"}},
+					"protocols": ["A2S"], "app": {"id": 70, "url": "fc"}},
 				{"id": 2, "host": "play.example.com", "port": 6061, "queryPort": 27016},
 				{"id": 1, "host": "", "port": 6062},
 				{"id": 0, "host": "203.0.113.8", "port": null},
@@ -647,7 +647,7 @@ func _test_backbone() -> void:
 		},
 	]
 
-	var source := DotBrowserSourceBackbone.for_site("http://site.test/", "arena")
+	var source := DotBrowserSourceBackbone.for_site("http://site.test/", "fc")
 	source.http = fake
 	_check(source.is_available(), "a URL turns it on")
 
@@ -657,7 +657,7 @@ func _test_backbone() -> void:
 	_check(fake.urls.size() == 2, "following the pagination to the last page")
 	_check(
 		fake.urls.size() > 0
-			and fake.urls[0] == "http://site.test/api/content/server/list?app=arena&limit=200&page=1",
+			and fake.urls[0] == "http://site.test/api/content/server/list?app=fc&limit=200&page=1",
 		"asking for one game's servers on the site's path"
 	)
 	_check(targets.size() == 3, "rows with no host or no port are skipped, a repeat is one row")
@@ -680,7 +680,7 @@ func _test_backbone() -> void:
 		"and every target is stamped with the backbone source"
 	)
 
-	var capped := DotBrowserSourceBackbone.for_site("http://site.test", "arena")
+	var capped := DotBrowserSourceBackbone.for_site("http://site.test", "fc")
 	capped.config.max_pages = 1
 	var capped_fake := FakeListing.new()
 	capped_fake.pages = fake.pages
@@ -702,7 +702,7 @@ func _test_backbone() -> void:
 	browser.register_as = &""
 	browser.favourites_path = "user://dot_browser_selftest/backbone.json"
 	add_child(browser)
-	var attached := DotBrowserSourceBackbone.for_site("http://127.0.0.1:9", "arena")
+	var attached := DotBrowserSourceBackbone.for_site("http://127.0.0.1:9", "fc")
 	browser.add_source(attached)
 	_check(
 		attached._http() is DotHttp and (attached._http() as Node).get_parent() == browser,
@@ -729,7 +729,7 @@ func _test_over_a_socket() -> void:
 		"rev": 7,
 		"sections": {
 			"info": {
-				"name": "Loopback", "map": "dm_one", "game_id": "arena",
+				"name": "Loopback", "map": "dm_one", "game_id": "fc",
 				"players": 3, "bots": 1, "max_players": 16, "tags": ["test"],
 			},
 		},
@@ -839,7 +839,7 @@ func _a2s_info(
 	_cstring(buf, "A dot server")
 	_cstring(buf, "dm_atrium")
 	_cstring(buf, "dot")
-	_cstring(buf, "Arena Deathmatch")
+	_cstring(buf, "FC Deathmatch")
 	buf.put_u16(0)
 	# Written verbatim, because the byte on the wire is humans plus bots and the
 	# point of the check is that the parser knows it.

@@ -4,7 +4,7 @@ extends DotConfig
 ## Where [DotBrowserSourceBackbone] reads its listing from, layered like every dot-* config.
 ##
 ## [codeblock]
-## godot --path . -- --browser-backbone-url=https://api.example.com --browser-app=arena
+## godot --path . -- --browser-backbone-url=https://api.example.com --browser-app=fc
 ## GS_BROWSER_BACKBONE_URL=https://api.example.com godot --path .
 ## [/codeblock]
 ##

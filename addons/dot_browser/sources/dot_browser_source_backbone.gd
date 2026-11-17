@@ -8,7 +8,7 @@ extends DotBrowserSource
 ## community actually runs rather than with an empty window.
 ##
 ## [codeblock]
-## var source := DotBrowserSourceBackbone.for_site("https://api.example.com", "arena")
+## var source := DotBrowserSourceBackbone.for_site("https://api.example.com", "fc")
 ## browser.add_source(source)   # DotBrowser hands the source somewhere to put its HTTP node
 ## [/codeblock]
 ##
