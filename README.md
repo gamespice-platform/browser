@@ -1,4 +1,4 @@
-[![dot-browser - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/231-dot-browser)
+[![Browser - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/231-dot-browser)
 
 A server browser for Godot 4.7+: a query client and a list model. It asks game servers what they are, then gives you sources, filters, sorting, favourites and history. Part of the [dot-*](https://github.com/gamespice-platform) family. It needs only [dot-core](https://github.com/gamespice-platform/core).
 
