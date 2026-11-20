@@ -1,4 +1,4 @@
-# dot-browser design
+# GameSpice Browser design
 
 Why the addon is shaped the way it is, and why the obvious alternative is wrong at each point. The rules are one line each in [CLAUDE.md](../CLAUDE.md).
 
@@ -6,11 +6,11 @@ Why the addon is shaped the way it is, and why the obvious alternative is wrong 
 
 `DotBrowserDqp` is a second implementation of a wire format dot-server-query already implements. It has to be: only dot-core may ever be a hard dependency, and in GDScript a script that merely mentions an absent `class_name` fails to parse and takes every script referencing it down with it. Naming `DotQueryProtocol` would make a server browser impossible to ship without a dedicated server installed.
 
-Two implementations of one format is also exactly the shape that has bitten this family repeatedly (a caller asking for one method name while the provider offered another; a value written under one name and read under another). So the self-test does not check this codec against itself. Its fixtures (`GOLDEN_QUERY`, `GOLDEN_PING`, `GOLDEN_CHALLENGE` in `examples/browser_selftest.gd`) are bytes `DotQueryProtocol` actually produced, pasted in as hex. If the two ever drift, a fixture fails rather than a browser quietly showing nothing. Regenerate them from dot-server-query, never from here.
+Two implementations of one format is also exactly the shape that has bitten this family repeatedly (a caller asking for one method name while the provider offered another; a value written under one name and read under another). So the self-test does not check this codec against itself. Its fixtures (`GOLDEN_QUERY`, `GOLDEN_PING`, `GOLDEN_CHALLENGE` in `examples/browser_selftest.gd`) are bytes `DotQueryProtocol` actually produced, pasted in as hex. If the two ever drift, a fixture fails rather than a browser quietly showing nothing. Regenerate them from GameSpice Server Query, never from here.
 
 ## A2S counts bots as players
 
-A2S's player-count byte is `humans + bots`; the reference implementations have always written it that way, and so does dot-server-query, with the bot count in a byte of its own. A browser that shows the first number shows a server with eight bots and nobody on it as an eight-player server, and the player who joins finds an empty map.
+A2S's player-count byte is `humans + bots`; the reference implementations have always written it that way, and so does GameSpice Server Query, with the bot count in a byte of its own. A browser that shows the first number shows a server with eight bots and nobody on it as an eight-player server, and the player who joins finds an empty map.
 
 `DotBrowserA2s.parse_info` subtracts, clamps at zero (a server whose bot byte exceeds its player byte is describing something impossible, and a negative count sorts to the top of a list), and reports `players` as humans. Every other field it produces uses DQP's names, so a `DotBrowserEntry` never learns which protocol answered it.
 
@@ -61,7 +61,7 @@ A listing hands out names as well as IPs (a server whose team addresses it by ho
 
 ## Deliberately not here
 
-- **A window.** No scene, no table, no theme. `DotBrowserEntry.to_row()` gives you a row as plain data and dot-ui's `DotServerList` (API 24) gives you somewhere to put it: `list.set_rows(entries.map(func(e): return e.to_row()))`. `describe()` is the one-line text form.
+- **A window.** No scene, no table, no theme. `DotBrowserEntry.to_row()` gives you a row as plain data and GameSpice UI's `DotServerList` (API 24) gives you somewhere to put it: `list.set_rows(entries.map(func(e): return e.to_row()))`. `describe()` is the one-line text form.
 - **A master server.** Nothing announces itself to a list here. The site listing above is the nearest thing, and a server reaches it by being listed on the site, not by anything in this addon.
 - **LAN discovery.** DQP has no broadcast form, and a subnet sweep is a different thing with different consequences. A `DotBrowserSource` that sweeps is twenty lines and belongs to whoever wants it.
-- **Connecting.** A browser produces an address. What a game does with one is dot-server's client link, and pretending otherwise would put a transport in here.
+- **Connecting.** A browser produces an address. What a game does with one is GameSpice Server's client link, and pretending otherwise would put a transport in here.

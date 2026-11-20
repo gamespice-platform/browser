@@ -4,7 +4,7 @@ extends DotBrowserQuery
 ## DQP over a WebSocket: the only query a browser build can make.
 ##
 ## A web page cannot open a UDP socket, so it can never speak A2S at any price and
-## cannot speak DQP's UDP form either. dot-server serves the same protocol as plain
+## cannot speak DQP's UDP form either. GameSpice Server serves the same protocol as plain
 ## JSON text frames over TCP for exactly this: send the request body, receive the
 ## response body, no binary header and no challenge.
 ##
@@ -16,7 +16,7 @@ extends DotBrowserQuery
 ## [b]On the scheme.[/b] This does not upgrade [code]ws://[/code] to
 ## [code]wss://[/code] on a secure page. `DotWeb.is_secure_context()` is not "the page
 ## is HTTPS" — a browser treats [code]http://localhost[/code] as a trustworthy origin,
-## so it is true on a plain HTTP page — and dot-core's transport once upgraded every
+## so it is true on a plain HTTP page — and GameSpice Core's transport once upgraded every
 ## development page's socket and failed against a server with no certificate.
 ## [method DotWeb.is_https_page] is the right question: on such a page [code]ws://[/code]
 ## is upgraded to [code]wss://[/code] (a server without TLS then fails quietly instead of

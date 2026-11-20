@@ -1,10 +1,10 @@
-# dot-browser
+# GameSpice Browser
 
 The server browser half: a query client that speaks DQP over UDP, DQP over a WebSocket and A2S, plus a list model with sources, filters, sorting, favourites and history. It ships no window.
 
 Read the family [CLAUDE.md](../../CLAUDE.md) first.
 
-**The distributable is `addons/dot_browser/`.** It requires [dot-core](../dot-core) and nothing else (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It never names dot-server-query's classes or dot-auth's client.
+**The distributable is `addons/dot_browser/`.** It requires [GameSpice Core](../dot-core) and nothing else (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It never names dot-server-query's classes or dot-auth's client.
 
 ## Read before
 
@@ -37,7 +37,7 @@ The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything))
 
 ## Rules that bite
 
-- The golden DQP fixtures come from dot-server-query's `DotQueryProtocol`; regenerate them there, never from this codec. [design](docs/design.md#the-deliberate-duplication-and-how-it-is-kept-honest)
+- The golden DQP fixtures come from GameSpice Server Query's `DotQueryProtocol`; regenerate them there, never from this codec. [design](docs/design.md#the-deliberate-duplication-and-how-it-is-kept-honest)
 - A2S `players` is humans: subtract bots, clamp at zero, and use DQP's field names. [design](docs/design.md#a2s-counts-bots-as-players)
 - No compressed A2S multi-packet. [design](docs/design.md#a2s-counts-bots-as-players)
 - Fan out with `poll` objects and the `_active`/`_pending` counter, never awaited per-worker signals; check `_refreshing` after `_fill_active()`. [design](docs/design.md#the-fan-out)
@@ -45,7 +45,7 @@ The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything))
 - AUTO falls back to A2S on a timeout or parse failure, never on a refusal, and picks WebSocket from `DotPlatform.has_udp()`. [design](docs/design.md#where-it-runs)
 - Never upgrade `ws://` to `wss://` from `is_secure_context()`. [design](docs/design.md#where-it-runs)
 - Discard every field a listing carries; ask the server. [design](docs/design.md#sources-and-the-sites-listing)
-- The backbone source is anonymous HTTP, never dot-auth's client (it prefixes the integration path and sends a server token). [design](docs/design.md#sources-and-the-sites-listing)
+- The backbone source is anonymous HTTP, never GameSpice Auth's client (it prefixes the integration path and sends a server token). [design](docs/design.md#sources-and-the-sites-listing)
 - A UDP socket takes only an IP: the UDP clients resolve a name first (`lookup_begin`/`lookup_poll`, IPv4 preferred); an override of `close()` calls `lookup_cancel()`. [design](docs/design.md#sources-and-the-sites-listing)
 
 Deliberately not here: a window, a master server, LAN discovery, connecting. [design](docs/design.md#deliberately-not-here)

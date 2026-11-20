@@ -3,18 +3,18 @@ extends RefCounted
 
 ## The client half of the dot query protocol (DQP), as a codec with no socket.
 ##
-## [b]This is a second implementation of a wire format dot-server already
-## implements, and that is deliberate.[/b] dot-browser depends on dot-core and
+## [b]This is a second implementation of a wire format GameSpice Server already
+## implements, and that is deliberate.[/b] GameSpice Browser depends on GameSpice Core and
 ## nothing else, and in GDScript a script that merely [i]mentions[/i] a
 ## [code]class_name[/code] the project does not have fails to parse and takes every
 ## script referencing it down with it — so naming [code]DotQueryProtocol[/code] here
 ## would make a server browser impossible to ship without a dedicated server.
 ##
 ## Two implementations of one format is also the exact shape this family has been
-## bitten by repeatedly: dot-map asking a cloud client for [code]ensure()[/code] when
+## bitten by repeatedly: GameSpice Map asking a cloud client for [code]ensure()[/code] when
 ## it offered [code]acquire()[/code], a punishment written under one name and read
 ## under another. So the self-test does not check this against itself. It checks it
-## against [b]bytes dot-server's encoder actually produced[/b], pasted in as hex.
+## against [b]bytes GameSpice Server's encoder actually produced[/b], pasted in as hex.
 ## If the two drift, a fixture fails rather than a browser quietly showing nothing.
 ##
 ## The format, little-endian throughout:

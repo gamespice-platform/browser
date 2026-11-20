@@ -1,16 +1,16 @@
 [![Browser - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/35-gs-browser)
 
-A server browser for Godot 4.7+: a query client and a list model. It asks game servers what they are, then gives you sources, filters, sorting, favourites and history. Part of the [dot-*](https://github.com/gamespice-platform) family. It needs only [dot-core](https://github.com/gamespice-platform/core).
+A server browser for Godot 4.7+: a query client and a list model. It asks game servers what they are, then gives you sources, filters, sorting, favourites and history. Part of the [GameSpice](https://github.com/gamespice-platform) family. It needs only [GameSpice Core](https://github.com/gamespice-platform/core).
 
 It speaks three protocols, so one browser can list any server:
 
 | Protocol | Used for |
 | --- | --- |
-| DQP over UDP | Servers made with [dot-server-query](https://github.com/gamespice-platform/server-query). |
+| DQP over UDP | Servers made with [GameSpice Server Query](https://github.com/gamespice-platform/server-query). |
 | DQP as JSON over a WebSocket | Browser (web) builds, which cannot open a UDP socket. Picked automatically when the platform has no UDP. |
 | A2S | Existing servers and tools that speak nothing else. |
 
-dot-server-query is what this asks, but it is not a dependency. The wire formats are implemented here.
+GameSpice Server Query is what this asks, but it is not a dependency. The wire formats are implemented here.
 
 ## Install
 

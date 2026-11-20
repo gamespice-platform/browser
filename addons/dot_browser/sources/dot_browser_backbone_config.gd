@@ -1,7 +1,7 @@
 class_name DotBrowserBackboneConfig
 extends DotConfig
 
-## Where [DotBrowserSourceBackbone] reads its listing from, layered like every dot-* config.
+## Where [DotBrowserSourceBackbone] reads its listing from, layered like every gs-* config.
 ##
 ## [codeblock]
 ## godot --path . -- --browser-backbone-url=https://api.example.com --browser-app=fc

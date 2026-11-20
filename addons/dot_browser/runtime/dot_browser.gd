@@ -4,7 +4,7 @@ extends Node
 ## A server list: where the servers are, what they are doing, and in what order to
 ## draw them.
 ##
-## [b]The gap this fills.[/b] dot-server has answered queries since it was written —
+## [b]The gap this fills.[/b] GameSpice Server has answered queries since it was written —
 ## A2S for the twenty years of tooling that speaks nothing else, and its own richer
 ## protocol for everything else — and nothing in this family has ever asked one
 ## anything. A server that answers and a client that never asks is the family's most

@@ -11,7 +11,7 @@ extends RefCounted
 ##
 ## [b]Every string in here came off a socket from an address a stranger supplied.[/b]
 ## Names, maps and tags are capped on the way in, and a browser drawing them through
-## a [RichTextLabel] must escape them for exactly dot-chat's reason.
+## a [RichTextLabel] must escape them for exactly GameSpice Chat's reason.
 
 ## What the last query said.
 enum Status {
@@ -261,8 +261,8 @@ static func _clip(text: String) -> String:
 	return text.substr(0, MAX_TEXT)
 
 
-## A row for a list view: the keys dot-ui's DotServerList reads, plus a few it may grow
-## into. Plain data so dot-browser still names nothing outside dot-core. [code]players[/code]
+## A row for a list view: the keys GameSpice UI's DotServerList reads, plus a few it may grow
+## into. Plain data so GameSpice Browser still names nothing outside GameSpice Core. [code]players[/code]
 ## is humans; bots are their own key, for docs/design.md's reason.
 func to_row() -> Dictionary:
 	return {

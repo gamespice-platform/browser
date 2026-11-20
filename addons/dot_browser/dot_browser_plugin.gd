@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-## Editor entry point for dot-browser. Registers inspector types only.
+## Editor entry point for GameSpice Browser. Registers inspector types only.
 ##
 ## No autoloads. A browser is a screen's node, and a process showing two lists —
 ## favourites and everything else — has two of them.

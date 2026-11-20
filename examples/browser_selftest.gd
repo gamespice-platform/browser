@@ -6,10 +6,10 @@ extends Node
 ## Three kinds of check, and the first one is the point:
 ##
 ## [b]Golden bytes.[/b] This addon carries a second implementation of a wire format
-## dot-server already implements, because naming its [code]class_name[/code] would
+## GameSpice Server already implements, because naming its [code]class_name[/code] would
 ## make a server browser fail to parse without a dedicated server installed. Two
 ## implementations of one format is the shape this family has been bitten by
-## repeatedly, so the fixtures below are [b]bytes dot-server's own encoder
+## repeatedly, so the fixtures below are [b]bytes GameSpice Server's own encoder
 ## produced[/b], pasted in as hex. Checking this codec against itself would prove
 ## nothing at all.
 ##
@@ -28,7 +28,7 @@ extends Node
 const SECTIONS := 12
 const CHECKS := 143
 
-## Produced by dot-server's DotQueryProtocol.build_request(TYPE_QUERY, 7,
+## Produced by GameSpice Server's DotQueryProtocol.build_request(TYPE_QUERY, 7,
 ## 0x0123456789abcdef, {"sections": ["info"]}, true).
 const GOLDEN_QUERY := "445150310104070000000000000001000000efcdab89674523017b2273656374696f6e73223a5b22696e666f225d7d"
 
@@ -51,7 +51,7 @@ var _section_count := 0
 ## A DQP server on the loopback, in the smallest form that is still the protocol.
 ##
 ## Challenges, then answers. Deliberately built from this addon's own encoder rather
-## than from dot-server's, because what this section tests is the socket path — the
+## than from GameSpice Server's, because what this section tests is the socket path — the
 ## byte-level agreement is what the golden fixtures are for.
 class FakeDqpServer extends Node:
 	var socket: PacketPeerUDP = null
@@ -169,7 +169,7 @@ func _run() -> void:
 	get_tree().quit(1 if _failed > 0 else 0)
 
 
-# --- The wire format, against dot-server's own bytes -----------------------
+# --- The wire format, against GameSpice Server's own bytes -----------------------
 
 func _test_golden_bytes() -> void:
 	_section("DQP: golden bytes from dot-server's encoder")
@@ -279,7 +279,7 @@ func _test_a2s_info() -> void:
 	_check(int(clamped["players"]) == 0, "more bots than players clamps at zero rather than going negative")
 
 	# A response that ends early must fail rather than hand back a plausible value
-	# for the field after the overrun. dot-net shipped a reader whose exhaustion was
+	# for the field after the overrun. GameSpice Net shipped a reader whose exhaustion was
 	# not sticky and that is exactly what it did.
 	var truncated := data.slice(0, 20)
 	var short := DotBrowserA2s.parse_info(truncated)
@@ -828,7 +828,7 @@ func _row(
 
 
 ## An A2S_INFO response, written the way the specification says and the way
-## dot-server's A2S server writes one.
+## GameSpice Server's A2S server writes one.
 func _a2s_info(
 	total_players: int, max_players: int, bots: int, keywords: String
 ) -> PackedByteArray:

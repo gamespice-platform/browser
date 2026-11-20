@@ -14,7 +14,7 @@ extends RefCounted
 ## unpleasant in the protocol.
 ##
 ## [b]The trap worth naming.[/b] A2S's player-count byte is
-## [code]humans + bots[/code] — Source has always written it that way and dot-server
+## [code]humans + bots[/code] — Source has always written it that way and GameSpice Server
 ## writes it that way — while the bot count has a byte of its own. A browser that
 ## shows the first number shows a server with eight bots and no people as an
 ## eight-player server, and the player who joins it finds nobody there.
@@ -38,7 +38,7 @@ const RESPONSE_PING := 0x6A           ## 'j'
 ##
 ## Part of the wire format rather than a description of anything, so it is spelled
 ## exactly as the protocol spells it: a server receiving anything else is not being
-## asked in A2S, and will answer nothing. dot-server's own responder carries the same
+## asked in A2S, and will answer nothing. GameSpice Server's own responder carries the same
 ## constant with the same note.
 const INFO_PAYLOAD := "Source Engine Query"
 
@@ -122,7 +122,7 @@ static func challenge_of(data: PackedByteArray) -> int:
 ## Reads one split-packet header. Returns
 ## [code]{id, total, index, payload}[/code], or an empty dictionary.
 ##
-## This is A2S's uncompressed split-packet format, which is what dot-server writes. The
+## This is A2S's uncompressed split-packet format, which is what GameSpice Server writes. The
 ## compressed variant carries two extra fields on the first packet only and is
 ## deliberately not supported: the branches that use it are the branches whose
 ## multi-packet framing has been the single most common source of broken query
@@ -330,7 +330,7 @@ static func _dqp_port_of(keywords: String) -> int:
 
 ## A bounds-checked reader over a response.
 ##
-## [b][member ok] is sticky.[/b] dot-net shipped a reader whose exhaustion was not,
+## [b][member ok] is sticky.[/b] GameSpice Net shipped a reader whose exhaustion was not,
 ## so a decoder that skipped the check got a plausible value for the field *after*
 ## the overrun — which is worse than a wrong one, because it is in range. Here, once
 ## a read runs past the end every later read returns a zero and [member ok] stays

@@ -3,7 +3,7 @@ extends DotBrowserSource
 
 ## The servers a site lists for a game: website-city's [code]GET /api/content/server/list[/code].
 ##
-## dot-server already reports its own player count and map to its site listing. This is the
+## GameSpice Server already reports its own player count and map to its site listing. This is the
 ## other direction: reading the listing back, so a player's browser starts with the servers a
 ## community actually runs rather than with an empty window.
 ##
@@ -12,10 +12,10 @@ extends DotBrowserSource
 ## browser.add_source(source)   # DotBrowser hands the source somewhere to put its HTTP node
 ## [/codeblock]
 ##
-## [b]Anonymous, over plain HTTP, never through dot-auth.[/b] The listing is public and the
+## [b]Anonymous, over plain HTTP, never through GameSpice Auth.[/b] The listing is public and the
 ## site answers it without a key, so a browser needs no sign-in to open — and a server
 ## browser is the last thing that should. The first version of this source went through
-## dot-auth's backbone client instead, which could never have worked: that client prefixes
+## GameSpice Auth's backbone client instead, which could never have worked: that client prefixes
 ## every path with the integration surface and sends a SERVER's integration token, which a
 ## player's game does not have.
 ##
