@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="dot-browser"
+config/name="gs-browser"
 config/description="A server browser: a query client speaking DQP and A2S, and a list model with sources, filters, sorting, favourites and history."
 config/version="0.1.0"
 run/main_scene="res://examples/browser_selftest.tscn"
@@ -24,7 +24,7 @@ window/size/viewport_height=900
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dot_core/plugin.cfg", "res://addons/dot_browser/plugin.cfg")
+enabled=PackedStringArray("res://addons/gs_core/plugin.cfg", "res://addons/gs_browser/plugin.cfg")
 
 [importer_defaults]
 

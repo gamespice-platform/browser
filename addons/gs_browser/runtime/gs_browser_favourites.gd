@@ -15,7 +15,7 @@ extends RefCounted
 
 const CHANNEL := "browser"
 
-const DEFAULT_PATH := "user://dot_browser/servers.json"
+const DEFAULT_PATH := "user://gs_browser/servers.json"
 
 ## Most history rows kept. Ten servers is a session; a thousand is a file a player's
 ## browser opens slower every week.

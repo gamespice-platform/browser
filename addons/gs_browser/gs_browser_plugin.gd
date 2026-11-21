@@ -6,10 +6,10 @@ extends EditorPlugin
 ## No autoloads. A browser is a screen's node, and a process showing two lists —
 ## favourites and everything else — has two of them.
 
-const _ICON := "res://addons/dot_browser/icon_placeholder.svg"
+const _ICON := "res://addons/gs_browser/icon_placeholder.svg"
 
 const _TYPES := [
-	["GSBrowser", "Node", "res://addons/dot_browser/runtime/dot_browser.gd"],
+	["GSBrowser", "Node", "res://addons/gs_browser/runtime/gs_browser.gd"],
 ]
 
 

@@ -51,7 +51,7 @@ static func for_site(base_url: String, app: String = "") -> GSBrowserSourceBackb
 
 
 ## A source configured from the layered config: defaults, then [param file_path] if given,
-## then [code]DOT_BROWSER_*[/code] and [code]--browser-*[/code].
+## then [code]GS_BROWSER_*[/code] and [code]--browser-*[/code].
 static func from_config(
 	defaults: GSBrowserBackboneConfig = null, file_path: String = ""
 ) -> GSResult:

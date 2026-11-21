@@ -4,7 +4,7 @@ Why the addon is shaped the way it is, and why the obvious alternative is wrong 
 
 ## The deliberate duplication, and how it is kept honest
 
-`GSBrowserDqp` is a second implementation of a wire format dot-server-query already implements. It has to be: only dot-core may ever be a hard dependency, and in GDScript a script that merely mentions an absent `class_name` fails to parse and takes every script referencing it down with it. Naming `GSQueryProtocol` would make a server browser impossible to ship without a dedicated server installed.
+`GSBrowserDqp` is a second implementation of a wire format gs-server-query already implements. It has to be: only gs-core may ever be a hard dependency, and in GDScript a script that merely mentions an absent `class_name` fails to parse and takes every script referencing it down with it. Naming `GSQueryProtocol` would make a server browser impossible to ship without a dedicated server installed.
 
 Two implementations of one format is also exactly the shape that has bitten this family repeatedly (a caller asking for one method name while the provider offered another; a value written under one name and read under another). So the self-test does not check this codec against itself. Its fixtures (`GOLDEN_QUERY`, `GOLDEN_PING`, `GOLDEN_CHALLENGE` in `examples/browser_selftest.gd`) are bytes `GSQueryProtocol` actually produced, pasted in as hex. If the two ever drift, a fixture fails rather than a browser quietly showing nothing. Regenerate them from GameSpice Server Query, never from here.
 
@@ -43,15 +43,15 @@ Here a query is an object with `poll(now_ms)`, `GSBrowser` pumps them in `_proce
 | Desktop, mobile | DQP and A2S over UDP, and the WebSocket form if a server offers it. |
 | Browser | DQP over WebSocket only. A tab cannot open a UDP socket, so A2S is unreachable at any price. `Protocol.AUTO` picks the WebSocket form from `GSPlatform.has_udp()`: the capability, not the platform name, because a desktop build behind a firewall that blocks UDP is in the same position. |
 
-`GSBrowserWsClient` does not upgrade `ws://` to `wss://` on a secure page. `GSWeb.is_secure_context()` is not "the page is HTTPS" (a browser treats `http://localhost` as a trustworthy origin), and dot-core's transport once upgraded every development page's socket and failed against a server with no certificate. The scheme is the caller's.
+`GSBrowserWsClient` does not upgrade `ws://` to `wss://` on a secure page. `GSWeb.is_secure_context()` is not "the page is HTTPS" (a browser treats `http://localhost` as a trustworthy origin), and gs-core's transport once upgraded every development page's socket and failed against a server with no certificate. The scheme is the caller's.
 
 ## Sources, and the site's listing
 
 A `GSBrowserSource` produces addresses. `GSBrowserSourceList` is a fixed list; `GSBrowserSourceBackbone` reads website-city's `GET /api/content/server/list` (contract: website-city `docs/api/public-content-api.md#the-server-listing`): `data` rows of `host`, `port`, `queryPort`, `protocols`, `app`, paged by `pagination.totalPages`, filtered to one game by `?app=<slug>`. It also reads the looser shapes a community's own listing might send (a bare array, `servers`, `ip`/`address`, `query_port`).
 
-It is anonymous, over dot-core's `GSHttp`, and never goes through dot-auth. The first version took a duck-typed dot-auth `GSBackboneClient` and called `get_integration(path)`, which could not have worked: that client prefixes every path with `/api/integration/v1/` and sends a server's integration token, which a player's game does not have. The listing is public, so nothing is needed but an origin.
+It is anonymous, over gs-core's `GSHttp`, and never goes through gs-auth. The first version took a duck-typed gs-auth `GSBackboneClient` and called `get_integration(path)`, which could not have worked: that client prefixes every path with `/api/integration/v1/` and sends a server's integration token, which a player's game does not have. The listing is public, so nothing is needed but an origin.
 
-Configuration is `GSBrowserBackboneConfig` (`--browser-*`, `DOT_BROWSER_*`), and an empty `backbone_url` turns the source off: a browser that reaches out to a website as it opens is a surprise in a LAN build or a test. `max_pages` caps how much of a long listing one refresh reads, because every row is a packet the browser sends next. The source is a `RefCounted` and HTTP needs a node in the tree, so `GSBrowser.add_source` calls `GSBrowserSource.attached(browser)` and the source puts its own `GSHttp` under the browser unless `http` was assigned.
+Configuration is `GSBrowserBackboneConfig` (`--browser-*`, `GS_BROWSER_*`), and an empty `backbone_url` turns the source off: a browser that reaches out to a website as it opens is a surprise in a LAN build or a test. `max_pages` caps how much of a long listing one refresh reads, because every row is a packet the browser sends next. The source is a `RefCounted` and HTTP needs a node in the tree, so `GSBrowser.add_source` calls `GSBrowserSource.attached(browser)` and the source puts its own `GSHttp` under the browser unless `http` was assigned.
 
 Every field a source carries about a server is discarded and asked of the server directly. A listing is a place to find servers, not a source of truth about what they are doing: a site that has not heard from a server in ten minutes still lists it.
 

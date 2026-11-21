@@ -34,7 +34,7 @@ extends GSConfig
 
 
 func env_prefix() -> String:
-	return "DOT_BROWSER_"
+	return "GS_BROWSER_"
 
 
 func cli_prefix() -> String:

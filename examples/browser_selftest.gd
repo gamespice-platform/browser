@@ -1,6 +1,6 @@
 extends Node
 
-## Exercises dot-browser against golden bytes, hand-built responses and a real
+## Exercises gs-browser against golden bytes, hand-built responses and a real
 ## socket.
 ##
 ## Three kinds of check, and the first one is the point:
@@ -133,7 +133,7 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	_line("dot-browser self-test")
+	_line("gs-browser self-test")
 	_line("")
 
 	_test_golden_bytes()
@@ -172,12 +172,12 @@ func _run() -> void:
 # --- The wire format, against GameSpice Server's own bytes -----------------------
 
 func _test_golden_bytes() -> void:
-	_section("DQP: golden bytes from dot-server's encoder")
+	_section("DQP: golden bytes from gs-server's encoder")
 
 	var query := GSBrowserDqp.build_request(
 		GSBrowserDqp.TYPE_QUERY, 7, TEST_COOKIE, {"sections": ["info"]}, true
 	)
-	_check(_hex(query) == GOLDEN_QUERY, "a query request is byte-identical to the one dot-server builds")
+	_check(_hex(query) == GOLDEN_QUERY, "a query request is byte-identical to the one gs-server builds")
 
 	var ping := GSBrowserDqp.build_request(
 		GSBrowserDqp.TYPE_PING, 1, 0, {}, false
@@ -528,7 +528,7 @@ func _test_best_sort(filter: GSBrowserFilter) -> void:
 func _test_favourites() -> void:
 	_section("favourites and history")
 
-	var path := "user://dot_browser_selftest/servers.json"
+	var path := "user://gs_browser_selftest/servers.json"
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
@@ -573,7 +573,7 @@ func _test_sources() -> void:
 	_check(targets.size() == 2, "and only the good ones")
 	_check((targets[0] as GSBrowserTarget).source == &"list", "every target is stamped with the source that produced it")
 
-	var file_path := "user://dot_browser_selftest/list.json"
+	var file_path := "user://gs_browser_selftest/list.json"
 	GSPaths.write_json(file_path, [
 		"10.0.0.1:27015",
 		{"address": "10.0.0.2", "port": 27016, "query_port": 27019},
@@ -700,7 +700,7 @@ func _test_backbone() -> void:
 
 	var browser := GSBrowser.new()
 	browser.register_as = &""
-	browser.favourites_path = "user://dot_browser_selftest/backbone.json"
+	browser.favourites_path = "user://gs_browser_selftest/backbone.json"
 	add_child(browser)
 	var attached := GSBrowserSourceBackbone.for_site("http://127.0.0.1:9", "fc")
 	browser.add_source(attached)
@@ -740,7 +740,7 @@ func _test_over_a_socket() -> void:
 	browser.register_as = &""
 	browser.timeout_ms = 400
 	browser.retries = 1
-	browser.favourites_path = "user://dot_browser_selftest/live.json"
+	browser.favourites_path = "user://gs_browser_selftest/live.json"
 	add_child(browser)
 
 	var target := GSBrowserTarget.make("127.0.0.1", server.port)

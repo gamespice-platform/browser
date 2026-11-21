@@ -14,8 +14,8 @@ GameSpice Server Query is what this asks, but it is not a dependency. The wire f
 
 ## Install
 
-1. Copy `addons/dot_browser/` and `addons/dot_core/` into your project.
-2. Enable dot-browser in *Project > Project Settings > Plugins*.
+1. Copy `addons/gs_browser/` and `addons/gs_core/` into your project.
+2. Enable gs-browser in *Project > Project Settings > Plugins*.
 
 ## Quick start
 

@@ -34,7 +34,7 @@ extends Node
 
 const CHANNEL := "browser"
 
-const SERVICE := &"dot_browser"
+const SERVICE := &"gs_browser"
 
 ## A refresh began. [param count] is how many servers will be asked.
 signal refresh_started(count: int)

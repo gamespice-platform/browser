@@ -11,7 +11,7 @@ extends Node
 ## The round trip the selftest cannot make: the suite reads canned pages, and this reads
 ## website-city's [code]GET /api/content/server/list[/code] over HTTP, then queries each
 ## address it got. Configured like any game's browser would be ([GSBrowserBackboneConfig]:
-## [code]--browser-*[/code] or [code]DOT_BROWSER_*[/code]); with no URL it says so and exits
+## [code]--browser-*[/code] or [code]GS_BROWSER_*[/code]); with no URL it says so and exits
 ## 2, because a run that read nothing must not look like a site with no servers.
 ##
 ## Exits 0 when the listing produced at least one server and, with [code]--expect=host:port[/code],

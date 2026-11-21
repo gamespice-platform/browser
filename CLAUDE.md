@@ -4,7 +4,7 @@ The server browser half: a query client that speaks DQP over UDP, DQP over a Web
 
 Read the family [CLAUDE.md](../../CLAUDE.md) first.
 
-**The distributable is `addons/dot_browser/`.** It requires [GameSpice Core](../dot-core) and nothing else (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It never names dot-server-query's classes or dot-auth's client.
+**The distributable is `addons/gs_browser/`.** It requires [GameSpice Core](../gs-core) and nothing else (`ln -s ../../gs-core/addons/gs_core addons/gs_core`, gitignored). It never names gs-server-query's classes or gs-auth's client.
 
 ## Read before
 
@@ -16,20 +16,20 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first.
 
 | Path | What |
 | --- | --- |
-| `core/dot_browser_target.gd` | `GSBrowserTarget`: an address and a `Protocol` (`AUTO`, DQP, WebSocket, A2S); `is_plausible_host` |
-| `core/dot_browser_entry.gd` | `GSBrowserEntry`: one row, in DQP's field names whatever answered |
-| `core/dot_browser_filter.gd` | `GSBrowserFilter`: local filtering |
-| `query/dot_browser_query.gd` | `GSBrowserQuery`: the base class with `poll(now_ms)` |
-| `query/dot_browser_dqp.gd`, `_dqp_client.gd` | `GSBrowserDqp` (the second DQP codec), `GSBrowserDqpClient` (UDP) |
-| `query/dot_browser_ws_client.gd` | `GSBrowserWsClient`: DQP over WebSocket; never upgrades the scheme |
-| `query/dot_browser_a2s.gd`, `_a2s_client.gd` | `GSBrowserA2s` (`parse_info` subtracts bots), `GSBrowserA2sClient` |
-| `runtime/dot_browser.gd` | `GSBrowser`: the node; `concurrency`, refresh, sorting |
-| `runtime/dot_browser_favourites.gd` | favourites and history on disk |
+| `core/gs_browser_target.gd` | `GSBrowserTarget`: an address and a `Protocol` (`AUTO`, DQP, WebSocket, A2S); `is_plausible_host` |
+| `core/gs_browser_entry.gd` | `GSBrowserEntry`: one row, in DQP's field names whatever answered |
+| `core/gs_browser_filter.gd` | `GSBrowserFilter`: local filtering |
+| `query/gs_browser_query.gd` | `GSBrowserQuery`: the base class with `poll(now_ms)` |
+| `query/gs_browser_dqp.gd`, `_dqp_client.gd` | `GSBrowserDqp` (the second DQP codec), `GSBrowserDqpClient` (UDP) |
+| `query/gs_browser_ws_client.gd` | `GSBrowserWsClient`: DQP over WebSocket; never upgrades the scheme |
+| `query/gs_browser_a2s.gd`, `_a2s_client.gd` | `GSBrowserA2s` (`parse_info` subtracts bots), `GSBrowserA2sClient` |
+| `runtime/gs_browser.gd` | `GSBrowser`: the node; `concurrency`, refresh, sorting |
+| `runtime/gs_browser_favourites.gd` | favourites and history on disk |
 | `sources/` | `GSBrowserSource` (`attached(browser)` hook), `GSBrowserSourceList`, `GSBrowserSourceBackbone` + `GSBrowserBackboneConfig` (website-city's `/api/content/server/list`, anonymous HTTP, off with no URL) |
 | `examples/browser_selftest.tscn` | the suite; its last section runs the browser against a DQP server on the loopback |
 | `examples/backbone_listing.tscn` | the round trip against a real site: reads the listing, queries every row; `--expect=host:port` |
 
-Paths except `examples/` are in `addons/dot_browser/`.
+Paths except `examples/` are in `addons/gs_browser/`.
 
 ## Running and testing
 
