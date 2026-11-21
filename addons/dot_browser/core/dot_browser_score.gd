@@ -1,5 +1,5 @@
 @tool
-class_name DotBrowserScore
+class_name GSBrowserScore
 extends RefCounted
 
 ## The one "Best" ranking, shared by the server list's Best sort and Quick Play.
@@ -20,7 +20,7 @@ const NO_FIT := -1.0
 ## Score in 0..1, higher is better, or [constant NO_FIT]. [param friends] is the friends on the
 ## server, [param party_size] the seats the caller needs, [param official] whether the server is
 ## official or verified.
-static func score(entry: DotBrowserEntry, friends: int = 0, party_size: int = 1, official: bool = false) -> float:
+static func score(entry: GSBrowserEntry, friends: int = 0, party_size: int = 1, official: bool = false) -> float:
 	if not entry.is_online() or entry.is_full() or entry.slots_free() < maxi(party_size, 1):
 		return NO_FIT
 	return (W_PING * ping_part(entry.ping_ms) + W_FILL * fill_part(entry.players, entry.max_players)

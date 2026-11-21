@@ -9,7 +9,7 @@ extends EditorPlugin
 const _ICON := "res://addons/dot_browser/icon_placeholder.svg"
 
 const _TYPES := [
-	["DotBrowser", "Node", "res://addons/dot_browser/runtime/dot_browser.gd"],
+	["GSBrowser", "Node", "res://addons/dot_browser/runtime/dot_browser.gd"],
 ]
 
 

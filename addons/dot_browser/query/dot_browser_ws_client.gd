@@ -1,5 +1,5 @@
-class_name DotBrowserWsClient
-extends DotBrowserQuery
+class_name GSBrowserWsClient
+extends GSBrowserQuery
 
 ## DQP over a WebSocket: the only query a browser build can make.
 ##
@@ -14,11 +14,11 @@ extends DotBrowserQuery
 ## back down the same connection where it cannot be aimed at anybody else.
 ##
 ## [b]On the scheme.[/b] This does not upgrade [code]ws://[/code] to
-## [code]wss://[/code] on a secure page. `DotWeb.is_secure_context()` is not "the page
+## [code]wss://[/code] on a secure page. `GSWeb.is_secure_context()` is not "the page
 ## is HTTPS" — a browser treats [code]http://localhost[/code] as a trustworthy origin,
 ## so it is true on a plain HTTP page — and GameSpice Core's transport once upgraded every
 ## development page's socket and failed against a server with no certificate.
-## [method DotWeb.is_https_page] is the right question: on such a page [code]ws://[/code]
+## [method GSWeb.is_https_page] is the right question: on such a page [code]ws://[/code]
 ## is upgraded to [code]wss://[/code] (a server without TLS then fails quietly instead of
 ## tripping the page's CSP), and a loopback endpoint is skipped: no visitor's 127.0.0.1
 ## is the server.
@@ -47,7 +47,7 @@ func url() -> String:
 	var raw := target.websocket_url
 	if raw == "":
 		raw = "ws://%s:%d" % [target.address, target.effective_query_port()]
-	return page_url(raw, DotWeb.is_https_page())
+	return page_url(raw, GSWeb.is_https_page())
 
 
 ## [param raw] as a page may open it: ws:// becomes wss:// on an HTTPS page, and a
@@ -62,28 +62,28 @@ static func page_url(raw: String, https_page: bool) -> String:
 	return "wss://" + rest
 
 
-func begin() -> DotResult:
-	if not DotPlatform.has_websocket():
-		return _finish(DotResult.fail(
-			DotError.CODE_UNSUPPORTED, "This platform has no WebSocket."
+func begin() -> GSResult:
+	if not GSPlatform.has_websocket():
+		return _finish(GSResult.fail(
+			GSError.CODE_UNSUPPORTED, "This platform has no WebSocket."
 		))
 
 	var address := url()
 	if address == "":
-		return _finish(DotResult.fail(DotError.CODE_INVALID, "No address to query (or loopback on an HTTPS page)."))
+		return _finish(GSResult.fail(GSError.CODE_INVALID, "No address to query (or loopback on an HTTPS page)."))
 
 	_peer = WebSocketPeer.new()
 	var err := _peer.connect_to_url(address)
 	if err != OK:
-		return _finish(DotResult.failure(
-			DotError.from_engine(err, "could not open %s" % address)
+		return _finish(GSResult.failure(
+			GSError.from_engine(err, "could not open %s" % address)
 		))
 
 	state = State.CONNECTING
 	_sent_at = Time.get_ticks_msec()
 	_deadline = _sent_at + timeout_ms
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 func poll(now_ms: int) -> bool:
@@ -104,8 +104,8 @@ func poll(now_ms: int) -> bool:
 				var parsed: Variant = JSON.parse_string(text)
 
 				if typeof(parsed) != TYPE_DICTIONARY:
-					_finish(DotResult.fail(
-						DotError.CODE_PARSE, "The response was not a JSON object."
+					_finish(GSResult.fail(
+						GSError.CODE_PARSE, "The response was not a JSON object."
 					))
 					return true
 
@@ -113,23 +113,23 @@ func poll(now_ms: int) -> bool:
 				ping_ms = maxi(0, now_ms - _sent_at)
 
 				if body.has("error"):
-					_finish(DotBrowserDqp.error_from_body(body))
+					_finish(GSBrowserDqp.error_from_body(body))
 					return true
 
-				_finish(DotResult.success(body))
+				_finish(GSResult.success(body))
 				return true
 
 		WebSocketPeer.STATE_CLOSED:
-			_finish(DotResult.fail(
-				DotError.CODE_NETWORK,
+			_finish(GSResult.fail(
+				GSError.CODE_NETWORK,
 				"The connection closed before an answer arrived.",
 				"code %d" % _peer.get_close_code()
 			))
 			return true
 
 	if now_ms >= _deadline:
-		_finish(DotResult.fail(
-			DotError.CODE_TIMEOUT, "The server did not answer.", url()
+		_finish(GSResult.fail(
+			GSError.CODE_TIMEOUT, "The server did not answer.", url()
 		))
 		return true
 
@@ -152,6 +152,6 @@ func _send() -> void:
 	_peer.send_text(JSON.stringify(body))
 
 
-func _finish(res: DotResult) -> DotResult:
+func _finish(res: GSResult) -> GSResult:
 	state = State.DONE
 	return finish(res)

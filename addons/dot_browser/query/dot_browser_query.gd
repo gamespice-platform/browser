@@ -1,7 +1,7 @@
-class_name DotBrowserQuery
+class_name GSBrowserQuery
 extends RefCounted
 
-## One query in flight. The interface [DotBrowser] pumps, and the reason it can.
+## One query in flight. The interface [GSBrowser] pumps, and the reason it can.
 ##
 ## Three protocols answer the same question — DQP over UDP, A2S over UDP, DQP as
 ## JSON over a WebSocket — and a browser that special-cased each would carry the
@@ -19,13 +19,13 @@ extends RefCounted
 const CHANNEL := "browser"
 
 ## Where to ask.
-var target: DotBrowserTarget = null
+var target: GSBrowserTarget = null
 
 ## Milliseconds to wait for a reply.
 var timeout_ms: int = 2500
 
 ## Set exactly once, when [method poll] first returns true.
-var result: DotResult = null
+var result: GSResult = null
 
 ## Round-trip time in milliseconds, or -1 when it was never measured.
 ##
@@ -35,7 +35,7 @@ var result: DotResult = null
 var ping_ms: int = -1
 
 
-func _init(p_target: DotBrowserTarget = null) -> void:
+func _init(p_target: GSBrowserTarget = null) -> void:
 	target = p_target
 
 
@@ -51,9 +51,9 @@ func query_name() -> StringName:
 
 
 ## Opens whatever is needed and sends the first request. Override.
-func begin() -> DotResult:
-	return DotResult.fail(
-		DotError.CODE_UNSUPPORTED, "This query does not know how to start."
+func begin() -> GSResult:
+	return GSResult.fail(
+		GSError.CODE_UNSUPPORTED, "This query does not know how to start."
 	)
 
 
@@ -85,20 +85,20 @@ var _lookup_deadline: int = 0
 ## Starts a lookup if the target is a name. [code]success(ip)[/code] when the address is
 ## already an IP, [code]success("")[/code] when a lookup is now pending (poll
 ## [method lookup_poll]), a failure when one could not be started.
-func lookup_begin() -> DotResult:
+func lookup_begin() -> GSResult:
 	var host := target.address.trim_prefix("[").trim_suffix("]")
 	if host.is_valid_ip_address():
-		return DotResult.success(host)
+		return GSResult.success(host)
 
 	_lookup_id = IP.resolve_hostname_queue_item(host, IP.TYPE_ANY)
 	if _lookup_id == IP.RESOLVER_INVALID_ID:
 		_lookup_id = -1
-		return DotResult.fail(
-			DotError.CODE_NETWORK, "Could not start a name lookup.", host
+		return GSResult.fail(
+			GSError.CODE_NETWORK, "Could not start a name lookup.", host
 		)
 
 	_lookup_deadline = Time.get_ticks_msec() + timeout_ms
-	return DotResult.success("")
+	return GSResult.success("")
 
 
 func lookup_pending() -> bool:
@@ -107,31 +107,31 @@ func lookup_pending() -> bool:
 
 ## [code]success("")[/code] while still waiting, [code]success(ip)[/code] once resolved,
 ## a failure when the name does not resolve or the lookup outlived [member timeout_ms].
-func lookup_poll(now_ms: int) -> DotResult:
+func lookup_poll(now_ms: int) -> GSResult:
 	if _lookup_id < 0:
-		return DotResult.fail(DotError.CODE_STATE, "No name lookup is running.")
+		return GSResult.fail(GSError.CODE_STATE, "No name lookup is running.")
 
 	match IP.get_resolve_item_status(_lookup_id):
 		IP.RESOLVER_STATUS_WAITING:
 			if now_ms >= _lookup_deadline:
 				lookup_cancel()
-				return DotResult.fail(
-					DotError.CODE_TIMEOUT, "The name lookup took too long.", target.address
+				return GSResult.fail(
+					GSError.CODE_TIMEOUT, "The name lookup took too long.", target.address
 				)
-			return DotResult.success("")
+			return GSResult.success("")
 
 		IP.RESOLVER_STATUS_DONE:
 			var ip := _prefer_ipv4(IP.get_resolve_item_addresses(_lookup_id))
 			lookup_cancel()
 			if ip == "":
-				return DotResult.fail(
-					DotError.CODE_NETWORK, "That name has no address.", target.address
+				return GSResult.fail(
+					GSError.CODE_NETWORK, "That name has no address.", target.address
 				)
-			return DotResult.success(ip)
+			return GSResult.success(ip)
 
 	lookup_cancel()
-	return DotResult.fail(
-		DotError.CODE_NETWORK, "That name does not resolve.", target.address
+	return GSResult.fail(
+		GSError.CODE_NETWORK, "That name does not resolve.", target.address
 	)
 
 
@@ -156,7 +156,7 @@ func lookup_cancel() -> void:
 ## Sets the result, closes, and returns it. What every finishing path calls.
 ##
 ## [b]And the one place a failed query is written down.[/b] Every failure here becomes
-## an offline row in [DotBrowser] and nothing else: a refresh of two hundred servers
+## an offline row in [GSBrowser] and nothing else: a refresh of two hundred servers
 ## that answers none of them draws two hundred grey lines and leaves no record of why.
 ## Logging in the base rather than in each of the three clients is deliberate -- they
 ## all finish through this method by construction, so the three cannot drift, and a
@@ -169,7 +169,7 @@ func lookup_cancel() -> void:
 ## WebSocket in this build, no address on the target. Nobody can fix those by waiting,
 ## and every server in the list fails the same way, which is the report a player
 ## actually sends in.
-func finish(res: DotResult) -> DotResult:
+func finish(res: GSResult) -> GSResult:
 	result = res
 	close()
 
@@ -182,9 +182,9 @@ func finish(res: DotResult) -> DotResult:
 		}
 
 		match res.code():
-			DotError.CODE_UNSUPPORTED, DotError.CODE_INVALID:
-				DotLog.warn(CHANNEL, "a server query could not be made at all", fields)
+			GSError.CODE_UNSUPPORTED, GSError.CODE_INVALID:
+				GSLog.warn(CHANNEL, "a server query could not be made at all", fields)
 			_:
-				DotLog.debug(CHANNEL, "a server query did not come back", fields)
+				GSLog.debug(CHANNEL, "a server query did not come back", fields)
 
 	return res

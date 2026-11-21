@@ -1,5 +1,5 @@
-class_name DotBrowserSourceBackbone
-extends DotBrowserSource
+class_name GSBrowserSourceBackbone
+extends GSBrowserSource
 
 ## The servers a site lists for a game: website-city's [code]GET /api/content/server/list[/code].
 ##
@@ -8,8 +8,8 @@ extends DotBrowserSource
 ## community actually runs rather than with an empty window.
 ##
 ## [codeblock]
-## var source := DotBrowserSourceBackbone.for_site("https://api.example.com", "fc")
-## browser.add_source(source)   # DotBrowser hands the source somewhere to put its HTTP node
+## var source := GSBrowserSourceBackbone.for_site("https://api.example.com", "fc")
+## browser.add_source(source)   # GSBrowser hands the source somewhere to put its HTTP node
 ## [/codeblock]
 ##
 ## [b]Anonymous, over plain HTTP, never through GameSpice Auth.[/b] The listing is public and the
@@ -25,23 +25,23 @@ extends DotBrowserSource
 ## from a server in ten minutes still lists it, and the player who clicks it wants to know
 ## that before they connect, not after.
 
-## Where to read from. [method DotBrowserBackboneConfig.enabled] false means the source is
+## Where to read from. [method GSBrowserBackboneConfig.enabled] false means the source is
 ## off: [method is_available] is false and a fetch says so.
-var config: DotBrowserBackboneConfig = DotBrowserBackboneConfig.new()
+var config: GSBrowserBackboneConfig = GSBrowserBackboneConfig.new()
 
-## Anything answering [code]get_json(url, headers) -> DotResult[/code] — a [DotHttp] in
-## practice. Left null, the source makes its own [DotHttp] under the node it was attached to
-## (see [method DotBrowserSource.attached]).
+## Anything answering [code]get_json(url, headers) -> GSResult[/code] — a [GSHttp] in
+## practice. Left null, the source makes its own [GSHttp] under the node it was attached to
+## (see [method GSBrowserSource.attached]).
 var http: Object = null
 
 var name_override: StringName = &"backbone"
 
 var _parent: WeakRef = null
-var _owned_http: DotHttp = null
+var _owned_http: GSHttp = null
 
 
 ## A source for one game on one site. [param app] is the site's app URL slug.
-static func for_site(base_url: String, app: String = "") -> DotBrowserSourceBackbone:
+static func for_site(base_url: String, app: String = "") -> GSBrowserSourceBackbone:
 	# `new()`, never this class's own name: a script that names itself in an expression
 	# leaks every script at exit on 4.7.2 (~/docs/gdscript-hazards.md).
 	var out := new()
@@ -53,16 +53,16 @@ static func for_site(base_url: String, app: String = "") -> DotBrowserSourceBack
 ## A source configured from the layered config: defaults, then [param file_path] if given,
 ## then [code]DOT_BROWSER_*[/code] and [code]--browser-*[/code].
 static func from_config(
-	defaults: DotBrowserBackboneConfig = null, file_path: String = ""
-) -> DotResult:
-	var cfg := defaults if defaults != null else DotBrowserBackboneConfig.new()
+	defaults: GSBrowserBackboneConfig = null, file_path: String = ""
+) -> GSResult:
+	var cfg := defaults if defaults != null else GSBrowserBackboneConfig.new()
 	var loaded := cfg.load_layered(file_path)
 	if not loaded.ok:
 		return loaded
 
 	var out := new()
 	out.config = cfg
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 func _source_name() -> StringName:
@@ -88,7 +88,7 @@ func _http() -> Object:
 	if parent == null:
 		return null
 
-	_owned_http = DotHttp.new()
+	_owned_http = GSHttp.new()
 	_owned_http.name = "BackboneHttp"
 	# A listing is advisory. Two retries on a dead site is a refresh that hangs for half a
 	# minute before showing the servers the player already knew about.
@@ -98,21 +98,21 @@ func _http() -> Object:
 	return _owned_http
 
 
-func _fetch() -> DotResult:
+func _fetch() -> GSResult:
 	if not is_available():
-		return DotResult.fail(
-			DotError.CODE_STATE,
+		return GSResult.fail(
+			GSError.CODE_STATE,
 			"No backbone URL is configured, so there is no server listing to read."
 		)
 
 	var client := _http()
 	if client == null:
-		return DotResult.fail(
-			DotError.CODE_STATE,
-			"The backbone source has no HTTP client: add it to a DotBrowser, or set http."
+		return GSResult.fail(
+			GSError.CODE_STATE,
+			"The backbone source has no HTTP client: add it to a GSBrowser, or set http."
 		)
 
-	var out: Array[DotBrowserTarget] = []
+	var out: Array[GSBrowserTarget] = []
 	var seen := {}
 	var page := 1
 	var pages := 1
@@ -120,7 +120,7 @@ func _fetch() -> DotResult:
 	while page <= pages and page <= config.max_pages:
 		# Assigned before the check, never `await x.f().ok`: that binds the await to the
 		# property access, so the coroutine is never awaited.
-		var res: DotResult = await client.call("get_json", config.page_url(page), {})
+		var res: GSResult = await client.call("get_json", config.page_url(page), {})
 		if not res.ok:
 			return res.wrap("Could not read the server listing.")
 
@@ -131,18 +131,18 @@ func _fetch() -> DotResult:
 		page += 1
 
 	if pages > config.max_pages:
-		DotLog.warn(CHANNEL, "the server listing has more pages than this browser reads", {
+		GSLog.warn(CHANNEL, "the server listing has more pages than this browser reads", {
 			"pages": pages, "read": config.max_pages, "kept": out.size(),
 		})
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 ## The rows of one page. Reads website-city's shape ([code]data[/code] with [code]host[/code],
 ## [code]port[/code], [code]queryPort[/code]) and the looser shapes a community's own listing
 ## might send: a bare array, [code]servers[/code], [code]ip[/code]/[code]address[/code],
 ## [code]query_port[/code].
-static func _collect(doc: Variant, out: Array[DotBrowserTarget], seen: Dictionary) -> void:
+static func _collect(doc: Variant, out: Array[GSBrowserTarget], seen: Dictionary) -> void:
 	var rows: Array = []
 
 	if typeof(doc) == TYPE_ARRAY:
@@ -159,14 +159,14 @@ static func _collect(doc: Variant, out: Array[DotBrowserTarget], seen: Dictionar
 		var row: Dictionary = entry
 
 		var address := str(row.get("host", row.get("address", row.get("ip", "")))).strip_edges()
-		if address == "" or not DotBrowserTarget.is_plausible_host(address):
+		if address == "" or not GSBrowserTarget.is_plausible_host(address):
 			continue
 
 		var port := _port(row.get("port"))
 		if port < 1 or port > 65535:
 			continue
 
-		var target := DotBrowserTarget.make(address, port)
+		var target := GSBrowserTarget.make(address, port)
 
 		var query_port := _port(row.get("queryPort", row.get("query_port")))
 		if query_port > 0 and query_port <= 65535 and query_port != port:

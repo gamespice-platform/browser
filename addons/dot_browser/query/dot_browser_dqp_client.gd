@@ -1,5 +1,5 @@
-class_name DotBrowserDqpClient
-extends DotBrowserQuery
+class_name GSBrowserDqpClient
+extends GSBrowserQuery
 
 ## One DQP query in flight, as a state machine somebody else pumps.
 ##
@@ -12,7 +12,7 @@ extends DotBrowserQuery
 ## [method poll] that says when it is done.
 ##
 ## So: [method begin], then [method poll] once a frame until it returns true, then
-## read [member result]. [DotBrowser] does the pumping.
+## read [member result]. [GSBrowser] does the pumping.
 ##
 ## The exchange:
 ##
@@ -58,30 +58,30 @@ func query_name() -> StringName:
 	return &"dqp"
 
 
-func begin() -> DotResult:
-	if not DotPlatform.has_udp():
+func begin() -> GSResult:
+	if not GSPlatform.has_udp():
 		# A browser tab cannot open a UDP socket at any price. This is not a failure
 		# to work around: it is why DQP is also served over WebSocket, and
-		# DotBrowserDqpWebClient is the path a web build takes.
-		return _finish(DotResult.fail(
-			DotError.CODE_UNSUPPORTED,
+		# GSBrowserDqpWebClient is the path a web build takes.
+		return _finish(GSResult.fail(
+			GSError.CODE_UNSUPPORTED,
 			"This platform has no UDP; query over WebSocket instead."
 		))
 
 	if target == null or target.address == "":
-		return _finish(DotResult.fail(DotError.CODE_INVALID, "No address to query."))
+		return _finish(GSResult.fail(GSError.CODE_INVALID, "No address to query."))
 
 	var looked := lookup_begin()
 	if not looked.ok:
 		return _finish(looked)
 	if str(looked.value) == "":
 		# A name: the socket opens once poll() has its address.
-		return DotResult.success(self)
+		return GSResult.success(self)
 
 	return _open(str(looked.value))
 
 
-func _open(ip: String) -> DotResult:
+func _open(ip: String) -> GSResult:
 	_socket = PacketPeerUDP.new()
 
 	# connect_to_host rather than set_dest_address: it also filters what arrives, so
@@ -90,15 +90,15 @@ func _open(ip: String) -> DotResult:
 	# a machine that has told a great many strangers its address.
 	var err := _socket.connect_to_host(ip, target.effective_query_port())
 	if err != OK:
-		return _finish(DotResult.failure(
-			DotError.from_engine(err, "could not open a socket to %s" % target.key())
+		return _finish(GSResult.failure(
+			GSError.from_engine(err, "could not open a socket to %s" % target.key())
 		))
 
 	_txn = randi() & 0x7FFFFFFF
 	_attempts_left = maxi(0, retries)
 	_send_challenge_request()
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 ## Advances the exchange. Returns true when [member result] is set.
@@ -131,8 +131,8 @@ func poll(now_ms: int) -> bool:
 				_send_query()
 			return false
 
-		_finish(DotResult.fail(
-			DotError.CODE_TIMEOUT,
+		_finish(GSResult.fail(
+			GSError.CODE_TIMEOUT,
 			"The server did not answer.", target.key()
 		))
 		return true
@@ -148,7 +148,7 @@ func close() -> void:
 
 
 func _handle(data: PackedByteArray, now_ms: int) -> bool:
-	var parsed := DotBrowserDqp.parse(data)
+	var parsed := GSBrowserDqp.parse(data)
 	if not parsed.ok:
 		# Not fatal. A socket can receive anything, including an A2S reply from a
 		# server serving both on one port, and a querier that gave up on the first
@@ -161,7 +161,7 @@ func _handle(data: PackedByteArray, now_ms: int) -> bool:
 		return false
 
 	match int(packet["type"]):
-		DotBrowserDqp.TYPE_CHALLENGE:
+		GSBrowserDqp.TYPE_CHALLENGE:
 			if state != State.CHALLENGING:
 				return false
 			ping_ms = maxi(0, now_ms - _sent_at)
@@ -170,16 +170,16 @@ func _handle(data: PackedByteArray, now_ms: int) -> bool:
 			_send_query()
 			return false
 
-		DotBrowserDqp.TYPE_ERROR:
-			_finish(DotBrowserDqp.error_from_body(packet["body"] as Dictionary))
+		GSBrowserDqp.TYPE_ERROR:
+			_finish(GSBrowserDqp.error_from_body(packet["body"] as Dictionary))
 			return true
 
-		DotBrowserDqp.TYPE_RESULT:
+		GSBrowserDqp.TYPE_RESULT:
 			return _handle_result(packet, data)
 
-		DotBrowserDqp.TYPE_PONG:
+		GSBrowserDqp.TYPE_PONG:
 			ping_ms = maxi(0, now_ms - _sent_at)
-			_finish(DotResult.success({}))
+			_finish(GSResult.success({}))
 			return true
 
 	return false
@@ -189,7 +189,7 @@ func _handle_result(packet: Dictionary, data: PackedByteArray) -> bool:
 	var total := int(packet["fragment_count"])
 
 	if total <= 1:
-		_finish(DotResult.success(packet["body"]))
+		_finish(GSResult.success(packet["body"]))
 		return true
 
 	var response_id := int(packet["response_id"])
@@ -211,7 +211,7 @@ func _handle_result(packet: Dictionary, data: PackedByteArray) -> bool:
 	if _fragments.size() < _fragment_total:
 		return false
 
-	_finish(DotBrowserDqp.reassemble(_fragments))
+	_finish(GSBrowserDqp.reassemble(_fragments))
 	return true
 
 
@@ -219,8 +219,8 @@ func _send_challenge_request() -> void:
 	state = State.CHALLENGING
 	_sent_at = Time.get_ticks_msec()
 	_deadline = _sent_at + timeout_ms
-	_socket.put_packet(DotBrowserDqp.build_request(
-		DotBrowserDqp.TYPE_CHALLENGE_REQUEST, _txn, 0
+	_socket.put_packet(GSBrowserDqp.build_request(
+		GSBrowserDqp.TYPE_CHALLENGE_REQUEST, _txn, 0
 	))
 
 
@@ -235,11 +235,11 @@ func _send_query() -> void:
 	if if_rev > 0:
 		body["if_rev"] = if_rev
 
-	_socket.put_packet(DotBrowserDqp.build_request(
-		DotBrowserDqp.TYPE_QUERY, _txn, _challenge, body
+	_socket.put_packet(GSBrowserDqp.build_request(
+		GSBrowserDqp.TYPE_QUERY, _txn, _challenge, body
 	))
 
 
-func _finish(res: DotResult) -> DotResult:
+func _finish(res: GSResult) -> GSResult:
 	state = State.DONE
 	return finish(res)

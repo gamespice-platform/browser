@@ -1,5 +1,5 @@
 @tool
-class_name DotBrowserFilter
+class_name GSBrowserFilter
 extends Resource
 
 ## What a player wants to see, and in what order.
@@ -16,7 +16,7 @@ enum Sort {
 	NAME,
 	MAP,
 	SLOTS_FREE,    ## Most room first.
-	BEST,          ## [DotBrowserScore]; appended so saved values keep their meaning.
+	BEST,          ## [GSBrowserScore]; appended so saved values keep their meaning.
 }
 
 @export_group("Text")
@@ -35,7 +35,7 @@ enum Sort {
 ##
 ## [b]Counts humans.[/b] A server with eight bots is empty as far as a player looking
 ## for a game is concerned, and A2S's player byte includes them — which is why
-## [DotBrowserEntry.players] is the subtracted number.
+## [GSBrowserEntry.players] is the subtracted number.
 @export var hide_empty: bool = false
 
 ## Hide servers a player cannot get into.
@@ -87,7 +87,7 @@ var friend_counts: Dictionary = {}
 var official_keys: Dictionary = {}
 
 
-func matches(entry: DotBrowserEntry, is_favourite: bool = false) -> bool:
+func matches(entry: GSBrowserEntry, is_favourite: bool = false) -> bool:
 	if online_only and not entry.is_online():
 		return false
 
@@ -143,7 +143,7 @@ func matches(entry: DotBrowserEntry, is_favourite: bool = false) -> bool:
 	return true
 
 
-func _has_tag(entry: DotBrowserEntry, tag: String) -> bool:
+func _has_tag(entry: GSBrowserEntry, tag: String) -> bool:
 	var wanted := tag.to_lower()
 	for held in entry.tags:
 		if str(held).to_lower() == wanted:
@@ -154,11 +154,11 @@ func _has_tag(entry: DotBrowserEntry, tag: String) -> bool:
 ## Orders [param entries] in place under [member sort].
 ##
 ## [param favourites] is the set of keys to float, when [member favourites_first].
-func apply_sort(entries: Array[DotBrowserEntry], favourites: Dictionary = {}) -> void:
+func apply_sort(entries: Array[GSBrowserEntry], favourites: Dictionary = {}) -> void:
 	var mode := sort
 	var float_favourites := favourites_first and not favourites.is_empty()
 
-	entries.sort_custom(func(a: DotBrowserEntry, b: DotBrowserEntry) -> bool:
+	entries.sort_custom(func(a: GSBrowserEntry, b: GSBrowserEntry) -> bool:
 		if float_favourites:
 			var fa := favourites.has(a.key())
 			var fb := favourites.has(b.key())
@@ -202,8 +202,8 @@ func apply_sort(entries: Array[DotBrowserEntry], favourites: Dictionary = {}) ->
 	)
 
 
-func _best(entry: DotBrowserEntry) -> float:
-	return DotBrowserScore.score(entry, int(friend_counts.get(entry.key(), 0)), party_size, official_keys.has(entry.key()))
+func _best(entry: GSBrowserEntry) -> float:
+	return GSBrowserScore.score(entry, int(friend_counts.get(entry.key(), 0)), party_size, official_keys.has(entry.key()))
 
 
 func sort_name() -> String:

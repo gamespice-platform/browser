@@ -1,4 +1,4 @@
-class_name DotBrowserDqp
+class_name GSBrowserDqp
 extends RefCounted
 
 ## The client half of the dot query protocol (DQP), as a codec with no socket.
@@ -7,7 +7,7 @@ extends RefCounted
 ## implements, and that is deliberate.[/b] GameSpice Browser depends on GameSpice Core and
 ## nothing else, and in GDScript a script that merely [i]mentions[/i] a
 ## [code]class_name[/code] the project does not have fails to parse and takes every
-## script referencing it down with it — so naming [code]DotQueryProtocol[/code] here
+## script referencing it down with it — so naming [code]GSQueryProtocol[/code] here
 ## would make a server browser impossible to ship without a dedicated server.
 ##
 ## Two implementations of one format is also the exact shape this family has been
@@ -117,9 +117,9 @@ static func build_request(
 ## gunzipping nor parsing it makes sense until [method reassemble] has put the pieces
 ## back — attempting either logs an engine error on a completely normal path, which
 ## is how a working protocol comes to look broken in a bug report.
-static func parse(data: PackedByteArray) -> DotResult:
+static func parse(data: PackedByteArray) -> GSResult:
 	if not looks_like_dqp(data):
-		return DotResult.fail(DotError.CODE_PARSE, "Not a dot query packet.")
+		return GSResult.fail(GSError.CODE_PARSE, "Not a dot query packet.")
 
 	var type := data.decode_u8(4)
 	var flags := data.decode_u8(5)
@@ -128,8 +128,8 @@ static func parse(data: PackedByteArray) -> DotResult:
 		# A request arriving where a response was expected is somebody else's traffic
 		# on a shared socket, or a server that has confused itself. Never treated as
 		# an answer.
-		return DotResult.fail(
-			DotError.CODE_INVALID, "That is a request, not a response."
+		return GSResult.fail(
+			GSError.CODE_INVALID, "That is a request, not a response."
 		)
 
 	var payload := data.slice(HEADER_BYTES)
@@ -154,15 +154,15 @@ static func parse(data: PackedByteArray) -> DotResult:
 	}
 
 	if payload.is_empty() or is_fragment:
-		return DotResult.success(out)
+		return GSResult.success(out)
 
 	var parsed: Variant = JSON.parse_string(payload.get_string_from_utf8())
 	if parsed == null or typeof(parsed) != TYPE_DICTIONARY:
 		out["body_error"] = "payload is not a JSON object"
-		return DotResult.success(out)
+		return GSResult.success(out)
 
 	out["body"] = parsed as Dictionary
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 ## Reassembles a complete response body from its datagrams, in any order.
@@ -171,13 +171,13 @@ static func parse(data: PackedByteArray) -> DotResult:
 ## refreshing a list of two hundred servers has one socket receiving two hundred
 ## replies, and stitching a piece of one response into another produces a body that
 ## parses and is wrong — which is worse than one that visibly fails.
-static func reassemble(fragments: Array) -> DotResult:
+static func reassemble(fragments: Array) -> GSResult:
 	if fragments.is_empty():
-		return DotResult.fail(DotError.CODE_PARSE, "No fragments.")
+		return GSResult.fail(GSError.CODE_PARSE, "No fragments.")
 
 	var first: PackedByteArray = fragments[0]
 	if not looks_like_dqp(first):
-		return DotResult.fail(DotError.CODE_PARSE, "Not a dot query packet.")
+		return GSResult.fail(GSError.CODE_PARSE, "Not a dot query packet.")
 
 	var total := int(first.decode_u16(14))
 	var response_id := int(first.decode_u32(10))
@@ -186,11 +186,11 @@ static func reassemble(fragments: Array) -> DotResult:
 		var single := parse(first)
 		if not single.ok:
 			return single
-		return DotResult.success((single.value as Dictionary).get("body", {}))
+		return GSResult.success((single.value as Dictionary).get("body", {}))
 
 	if total > MAX_FRAGMENTS:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"A response claimed %d fragments; the ceiling is %d." % [total, MAX_FRAGMENTS]
 		)
 
@@ -209,8 +209,8 @@ static func reassemble(fragments: Array) -> DotResult:
 		chunks[int(data.decode_u16(16))] = data.slice(HEADER_BYTES)
 
 	if chunks.size() != total:
-		return DotResult.fail(
-			DotError.CODE_TIMEOUT,
+		return GSResult.fail(
+			GSError.CODE_TIMEOUT,
 			"Incomplete response: %d of %d fragments." % [chunks.size(), total]
 		)
 
@@ -226,18 +226,18 @@ static func reassemble(fragments: Array) -> DotResult:
 
 	var parsed: Variant = JSON.parse_string(payload.get_string_from_utf8())
 	if parsed == null or typeof(parsed) != TYPE_DICTIONARY:
-		return DotResult.fail(
-			DotError.CODE_PARSE, "Reassembled payload is not a JSON object."
+		return GSResult.fail(
+			GSError.CODE_PARSE, "Reassembled payload is not a JSON object."
 		)
 
-	return DotResult.success(parsed as Dictionary)
+	return GSResult.success(parsed as Dictionary)
 
 
-## Turns an ERROR response body into a failed [DotResult].
-static func error_from_body(body: Dictionary) -> DotResult:
-	var code := str(body.get("code", DotError.CODE_INVALID))
+## Turns an ERROR response body into a failed [GSResult].
+static func error_from_body(body: Dictionary) -> GSResult:
+	var code := str(body.get("code", GSError.CODE_INVALID))
 	var message := str(body.get("error", "The server refused the query."))
-	return DotResult.fail(code, message)
+	return GSResult.fail(code, message)
 
 
 static func type_name(type: int) -> String:
@@ -252,19 +252,19 @@ static func type_name(type: int) -> String:
 	return "unknown(%d)" % type
 
 
-static func _gunzip(payload: PackedByteArray) -> DotResult:
+static func _gunzip(payload: PackedByteArray) -> GSResult:
 	if payload.is_empty():
-		return DotResult.success(payload)
+		return GSResult.success(payload)
 
 	var inflated := payload.decompress_dynamic(
 		MAX_BODY_BYTES, FileAccess.COMPRESSION_GZIP
 	)
 
 	if inflated.is_empty():
-		return DotResult.fail(
-			DotError.CODE_PARSE,
+		return GSResult.fail(
+			GSError.CODE_PARSE,
 			"Could not decompress the payload.",
 			"claimed gzip, %d bytes" % payload.size()
 		)
 
-	return DotResult.success(inflated)
+	return GSResult.success(inflated)

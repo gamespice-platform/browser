@@ -1,7 +1,7 @@
-class_name DotBrowserBackboneConfig
-extends DotConfig
+class_name GSBrowserBackboneConfig
+extends GSConfig
 
-## Where [DotBrowserSourceBackbone] reads its listing from, layered like every gs-* config.
+## Where [GSBrowserSourceBackbone] reads its listing from, layered like every gs-* config.
 ##
 ## [codeblock]
 ## godot --path . -- --browser-backbone-url=https://api.example.com --browser-app=fc
@@ -60,13 +60,13 @@ func page_url(page: int) -> String:
 	]
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	var url := backbone_url.strip_edges()
 	if url != "" and not (url.begins_with("http://") or url.begins_with("https://")):
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"backbone_url needs an http:// or https:// scheme.",
 			url
 		)
 
-	return DotResult.success(self)
+	return GSResult.success(self)

@@ -1,4 +1,4 @@
-class_name DotBrowserSource
+class_name GSBrowserSource
 extends RefCounted
 
 ## Where a list of addresses comes from. Subclass point.
@@ -14,18 +14,18 @@ extends RefCounted
 ## counts would be a source a listing site could use to lie about them.
 ##
 ## [codeblock]
-## class MyMasterServer extends DotBrowserSource:
+## class MyMasterServer extends GSBrowserSource:
 ##     func _source_name() -> StringName:
 ##         return &"master"
 ##
-##     func _fetch() -> DotResult:
+##     func _fetch() -> GSResult:
 ##         var res := await http.get_json("https://example.com/servers")
 ##         if not res.ok:
 ##             return res
-##         var out: Array[DotBrowserTarget] = []
+##         var out: Array[GSBrowserTarget] = []
 ##         for row in res.value:
-##             out.append(DotBrowserTarget.make(row["ip"], int(row["port"])))
-##         return DotResult.success(out)
+##             out.append(GSBrowserTarget.make(row["ip"], int(row["port"])))
+##         return GSResult.success(out)
 ## [/codeblock]
 
 const CHANNEL := "browser"
@@ -42,11 +42,11 @@ func _source_name() -> StringName:
 
 ## Produces the addresses. Override.
 ##
-## May be a coroutine — [DotBrowser] awaits the call either way. Return a
-## [DotResult] whose value is an [code]Array[DotBrowserTarget][/code].
-func _fetch() -> DotResult:
-	return DotResult.fail(
-		DotError.CODE_UNSUPPORTED, "This source does not know how to fetch anything."
+## May be a coroutine — [GSBrowser] awaits the call either way. Return a
+## [GSResult] whose value is an [code]Array[GSBrowserTarget][/code].
+func _fetch() -> GSResult:
+	return GSResult.fail(
+		GSError.CODE_UNSUPPORTED, "This source does not know how to fetch anything."
 	)
 
 
@@ -54,7 +54,7 @@ func source_name() -> StringName:
 	return _source_name()
 
 
-## Called by [method DotBrowser.add_source] with the browser the source now belongs to.
+## Called by [method GSBrowser.add_source] with the browser the source now belongs to.
 ##
 ## A source is a [RefCounted] and cannot hold a node, but one that talks HTTP needs an
 ## [HTTPRequest] in the tree; this is where it learns where to put one. Override
@@ -72,24 +72,24 @@ func _attached(_browser: Node) -> void:
 ## The stamping happens here rather than in each subclass because a subclass that
 ## forgot it would produce targets a browser cannot attribute — and the symptom is a
 ## list that works, which is the kind of bug that survives.
-func fetch() -> DotResult:
-	var res: DotResult = await _fetch()
+func fetch() -> GSResult:
+	var res: GSResult = await _fetch()
 	if not res.ok:
 		return res.wrap("The '%s' server source failed." % String(source_name()))
 
 	var value: Variant = res.value
 	if typeof(value) != TYPE_ARRAY:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"A server source must produce an array of targets.",
 			String(source_name())
 		)
 
-	var out: Array[DotBrowserTarget] = []
+	var out: Array[GSBrowserTarget] = []
 	var dropped := 0
 
 	for entry in (value as Array):
-		var target := entry as DotBrowserTarget
+		var target := entry as GSBrowserTarget
 		if target == null:
 			dropped += 1
 			continue
@@ -103,8 +103,8 @@ func fetch() -> DotResult:
 	# than the master server said it would be. There is nothing to see and nothing to
 	# search for, so this is the only place it can be said.
 	if dropped > 0:
-		DotLog.warn(CHANNEL, "a server source produced rows that are not targets", {
+		GSLog.warn(CHANNEL, "a server source produced rows that are not targets", {
 			"source": String(source_name()), "dropped": dropped, "kept": out.size()
 		})
 
-	return DotResult.success(out)
+	return GSResult.success(out)

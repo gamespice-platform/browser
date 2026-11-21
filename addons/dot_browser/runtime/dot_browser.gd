@@ -1,4 +1,4 @@
-class_name DotBrowser
+class_name GSBrowser
 extends Node
 
 ## A server list: where the servers are, what they are doing, and in what order to
@@ -12,8 +12,8 @@ extends Node
 ## nobody.
 ##
 ## [codeblock]
-## var browser := DotBrowser.new()
-## browser.add_source(DotBrowserSourceList.of(PackedStringArray([
+## var browser := GSBrowser.new()
+## browser.add_source(GSBrowserSourceList.of(PackedStringArray([
 ##     "eu1.example.com:27015", "127.0.0.1:27016",
 ## ])))
 ## browser.entry_updated.connect(_redraw_row)
@@ -40,13 +40,13 @@ const SERVICE := &"dot_browser"
 signal refresh_started(count: int)
 
 ## One server answered, or did not.
-signal entry_updated(entry: DotBrowserEntry)
+signal entry_updated(entry: GSBrowserEntry)
 
 ## Every query in a refresh has finished.
 signal refresh_finished(online: int, total: int)
 
 ## A source could not produce addresses. Not fatal: the others still run.
-signal source_failed(source: StringName, error: DotError)
+signal source_failed(source: StringName, error: GSError)
 
 @export_group("Querying")
 
@@ -92,15 +92,15 @@ const CONCURRENCY_WARN := 256
 @export var favourites_path: String = ""
 
 ## What to show and in what order. Applied by [method filtered], never by the query.
-var filter: DotBrowserFilter = null
+var filter: GSBrowserFilter = null
 
-var favourites: DotBrowserFavourites = null
+var favourites: GSBrowserFavourites = null
 
 var _entries: Dictionary = {}
 var _order: Array[String] = []
-var _pending: Array[DotBrowserTarget] = []
+var _pending: Array[GSBrowserTarget] = []
 var _active: Array[_Attempt] = []
-var _sources: Array[DotBrowserSource] = []
+var _sources: Array[GSBrowserSource] = []
 var _refreshing: bool = false
 var _refresh_total: int = 0
 var _started: bool = false
@@ -112,8 +112,8 @@ var _started: bool = false
 ## for this address" is per address, and a browser that tracked it globally would
 ## fall back the whole list to A2S the first time one server was a Source server.
 class _Attempt extends RefCounted:
-	var entry: DotBrowserEntry = null
-	var client: DotBrowserQuery = null
+	var entry: GSBrowserEntry = null
+	var client: GSBrowserQuery = null
 	var tried_dqp: bool = false
 	var tried_a2s: bool = false
 	var tried_web: bool = false
@@ -123,9 +123,9 @@ class _Attempt extends RefCounted:
 			return true
 		return client.poll(now_ms)
 
-	func result() -> DotResult:
+	func result() -> GSResult:
 		if client == null:
-			return DotResult.fail(DotError.CODE_INTERNAL, "No query was started.")
+			return GSResult.fail(GSError.CODE_INTERNAL, "No query was started.")
 		return client.result
 
 	func ping_ms() -> int:
@@ -138,48 +138,48 @@ func _ready() -> void:
 	start()
 
 
-func start() -> DotResult:
+func start() -> GSResult:
 	if _started:
-		return DotResult.success(self)
+		return GSResult.success(self)
 
 	if filter == null:
-		filter = DotBrowserFilter.new()
+		filter = GSBrowserFilter.new()
 
 	if favourites == null:
-		favourites = DotBrowserFavourites.new(
-			favourites_path if favourites_path != "" else DotBrowserFavourites.DEFAULT_PATH
+		favourites = GSBrowserFavourites.new(
+			favourites_path if favourites_path != "" else GSBrowserFavourites.DEFAULT_PATH
 		)
 
 	if register_as != &"":
-		DotRegistry.register(register_as, self)
+		GSRegistry.register(register_as, self)
 
 	set_process(true)
 	_started = true
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 # --- Sources ---------------------------------------------------------------
 
-func add_source(source: DotBrowserSource) -> void:
+func add_source(source: GSBrowserSource) -> void:
 	if source == null:
 		return
 	_sources.append(source)
 	source.attached(self)
 
 
-func remove_source(source: DotBrowserSource) -> void:
+func remove_source(source: GSBrowserSource) -> void:
 	var index := _sources.find(source)
 	if index >= 0:
 		_sources.remove_at(index)
 
 
-func sources() -> Array[DotBrowserSource]:
+func sources() -> Array[GSBrowserSource]:
 	return _sources.duplicate()
 
 
 ## Adds a target by hand — the "connect to this address" box.
-func add_target(target: DotBrowserTarget) -> DotBrowserEntry:
+func add_target(target: GSBrowserTarget) -> GSBrowserEntry:
 	if target == null:
 		return null
 
@@ -187,7 +187,7 @@ func add_target(target: DotBrowserTarget) -> DotBrowserEntry:
 	if _entries.has(key):
 		return _entries[key]
 
-	var entry := DotBrowserEntry.of(target)
+	var entry := GSBrowserEntry.of(target)
 	_entries[key] = entry
 	_order.append(key)
 
@@ -199,16 +199,16 @@ func add_target(target: DotBrowserTarget) -> DotBrowserEntry:
 ## Asks every source for addresses, then asks every address what it is.
 ##
 ## Returns when the last query has finished or timed out. Safe to call again while
-## one is running: the second call is refused with [constant DotError.CODE_STATE]
+## one is running: the second call is refused with [constant GSError.CODE_STATE]
 ## rather than doubling the outstanding queries, because a player holding the refresh
 ## button is the most ordinary input there is.
-func refresh() -> DotResult:
+func refresh() -> GSResult:
 	if not _started:
 		start()
 
 	if _refreshing:
-		return DotResult.fail(
-			DotError.CODE_STATE, "A refresh is already running."
+		return GSResult.fail(
+			GSError.CODE_STATE, "A refresh is already running."
 		)
 
 	var bad := _check_concurrency()
@@ -219,16 +219,16 @@ func refresh() -> DotResult:
 		if not source.enabled:
 			continue
 
-		var res: DotResult = await source.fetch()
+		var res: GSResult = await source.fetch()
 		if not res.ok:
 			source_failed.emit(source.source_name(), res.error)
-			DotLog.warn(CHANNEL, "a server source failed", {
+			GSLog.warn(CHANNEL, "a server source failed", {
 				"source": String(source.source_name()), "error": str(res.error)
 			})
 			continue
 
 		for target in (res.value as Array):
-			add_target(target as DotBrowserTarget)
+			add_target(target as GSBrowserTarget)
 
 	return await refresh_known()
 
@@ -238,12 +238,12 @@ func refresh() -> DotResult:
 ## What a periodic refresh calls. A master server is polled far less often than the
 ## servers themselves: the list of who exists changes in minutes and what they are
 ## doing changes in seconds.
-func refresh_known() -> DotResult:
+func refresh_known() -> GSResult:
 	if not _started:
 		start()
 
 	if _refreshing:
-		return DotResult.fail(DotError.CODE_STATE, "A refresh is already running.")
+		return GSResult.fail(GSError.CODE_STATE, "A refresh is already running.")
 
 	var bad := _check_concurrency()
 	if not bad.ok:
@@ -251,7 +251,7 @@ func refresh_known() -> DotResult:
 
 	_pending.clear()
 	for key in _order:
-		var entry: DotBrowserEntry = _entries[key]
+		var entry: GSBrowserEntry = _entries[key]
 		_pending.append(entry.target)
 
 	_refresh_total = _pending.size()
@@ -261,7 +261,7 @@ func refresh_known() -> DotResult:
 		# Emitted anyway. A caller that only ever hears about a refresh that had work
 		# to do cannot tell "finished with nothing" from "never started".
 		refresh_finished.emit(0, 0)
-		return DotResult.success(0)
+		return GSResult.success(0)
 
 	_refreshing = true
 	_fill_active()
@@ -272,21 +272,21 @@ func refresh_known() -> DotResult:
 	if _refreshing:
 		await refresh_finished
 
-	return DotResult.success(_online_count())
+	return GSResult.success(_online_count())
 
 
 ## Queries one server directly, with whatever sections the caller wants.
 ##
 ## For the server a player clicked, which is where a roster is worth a round trip.
 func query(
-	target: DotBrowserTarget, want: PackedStringArray = PackedStringArray()
-) -> DotResult:
+	target: GSBrowserTarget, want: PackedStringArray = PackedStringArray()
+) -> GSResult:
 	if not _started:
 		start()
 
 	var entry := add_target(target)
 	if entry == null:
-		return DotResult.fail(DotError.CODE_INVALID, "No target.")
+		return GSResult.fail(GSError.CODE_INVALID, "No target.")
 
 	var attempt := _begin(entry, want if not want.is_empty() else sections)
 
@@ -294,7 +294,7 @@ func query(
 		await get_tree().process_frame
 
 	_apply(attempt)
-	return DotResult.success(entry)
+	return GSResult.success(entry)
 
 
 func _process(_delta: float) -> void:
@@ -325,53 +325,53 @@ func _process(_delta: float) -> void:
 		refresh_finished.emit(_online_count(), _refresh_total)
 
 
-func _check_concurrency() -> DotResult:
+func _check_concurrency() -> GSResult:
 	if concurrency < 0:
-		return DotResult.fail(
-			DotError.CODE_INVALID, "concurrency %d is negative; 0 means unlimited." % concurrency
+		return GSResult.fail(
+			GSError.CODE_INVALID, "concurrency %d is negative; 0 means unlimited." % concurrency
 		)
 	if concurrency > CONCURRENCY_WARN or concurrency == 0:
-		push_warning("DotBrowser: concurrency %s sends a burst of UDP that can look like a scan and lose replies." % (
+		push_warning("GSBrowser: concurrency %s sends a burst of UDP that can look like a scan and lose replies." % (
 			"unlimited" if concurrency == 0 else str(concurrency)))
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 func _fill_active() -> void:
 	while (concurrency == 0 or _active.size() < concurrency) and not _pending.is_empty():
-		var target: DotBrowserTarget = _pending.pop_front()
-		var entry: DotBrowserEntry = _entries[target.key()]
+		var target: GSBrowserTarget = _pending.pop_front()
+		var entry: GSBrowserEntry = _entries[target.key()]
 		_begin(entry, sections)
 
 
-func _begin(entry: DotBrowserEntry, want: PackedStringArray) -> _Attempt:
+func _begin(entry: GSBrowserEntry, want: PackedStringArray) -> _Attempt:
 	var attempt := _Attempt.new()
 	attempt.entry = entry
 
 	var protocol := entry.target.protocol
 
-	if protocol == DotBrowserTarget.Protocol.AUTO:
+	if protocol == GSBrowserTarget.Protocol.AUTO:
 		# A browser build has no UDP at all, so AUTO there means the WebSocket form.
 		# Asking about the capability rather than the platform name is the family
 		# rule, and here it is also the only correct question: a desktop export with
 		# UDP blocked by a firewall is in the same position.
 		protocol = (
-			DotBrowserTarget.Protocol.DQP if DotPlatform.has_udp()
-			else DotBrowserTarget.Protocol.DQP_WEB
+			GSBrowserTarget.Protocol.DQP if GSPlatform.has_udp()
+			else GSBrowserTarget.Protocol.DQP_WEB
 		)
 
 	match protocol:
-		DotBrowserTarget.Protocol.A2S:
+		GSBrowserTarget.Protocol.A2S:
 			attempt.tried_a2s = true
-			var a2s := DotBrowserA2sClient.new(entry.target)
+			var a2s := GSBrowserA2sClient.new(entry.target)
 			a2s.timeout_ms = timeout_ms
 			a2s.retries = retries
 			a2s.want_players = want.has("players")
 			attempt.client = a2s
 			a2s.begin()
 
-		DotBrowserTarget.Protocol.DQP_WEB:
+		GSBrowserTarget.Protocol.DQP_WEB:
 			attempt.tried_web = true
-			var ws := DotBrowserWsClient.new(entry.target)
+			var ws := GSBrowserWsClient.new(entry.target)
 			ws.timeout_ms = timeout_ms * 2
 			ws.sections = want
 			ws.if_rev = entry.rev if conditional else 0
@@ -380,7 +380,7 @@ func _begin(entry: DotBrowserEntry, want: PackedStringArray) -> _Attempt:
 
 		_:
 			attempt.tried_dqp = true
-			var dqp := DotBrowserDqpClient.new(entry.target)
+			var dqp := GSBrowserDqpClient.new(entry.target)
 			dqp.timeout_ms = timeout_ms
 			dqp.retries = retries
 			dqp.sections = want
@@ -399,22 +399,22 @@ func _begin(entry: DotBrowserEntry, want: PackedStringArray) -> _Attempt:
 ## asking it again in another protocol doubles the traffic to a server that already
 ## said no.
 func _should_fall_back(attempt: _Attempt) -> bool:
-	if attempt.entry.target.protocol != DotBrowserTarget.Protocol.AUTO:
+	if attempt.entry.target.protocol != GSBrowserTarget.Protocol.AUTO:
 		return false
-	if attempt.tried_a2s or not DotPlatform.has_udp():
+	if attempt.tried_a2s or not GSPlatform.has_udp():
 		return false
 
 	var res := attempt.result()
 	if res == null or res.ok:
 		return false
 
-	return res.code() == DotError.CODE_TIMEOUT or res.code() == DotError.CODE_PARSE
+	return res.code() == GSError.CODE_TIMEOUT or res.code() == GSError.CODE_PARSE
 
 
 func _fall_back(attempt: _Attempt) -> void:
 	attempt.tried_a2s = true
 
-	var a2s := DotBrowserA2sClient.new(attempt.entry.target)
+	var a2s := GSBrowserA2sClient.new(attempt.entry.target)
 	a2s.timeout_ms = timeout_ms
 	a2s.retries = retries
 	a2s.want_players = sections.has("players")
@@ -427,8 +427,8 @@ func _apply(attempt: _Attempt) -> void:
 	var res := attempt.result()
 
 	if res == null:
-		entry.mark_offline(DotError.make(
-			DotError.CODE_INTERNAL, "The query produced no result."
+		entry.mark_offline(GSError.make(
+			GSError.CODE_INTERNAL, "The query produced no result."
 		))
 		entry_updated.emit(entry)
 		return
@@ -461,7 +461,7 @@ func _apply(attempt: _Attempt) -> void:
 func _online_count() -> int:
 	var total := 0
 	for key in _order:
-		if (_entries[key] as DotBrowserEntry).is_online():
+		if (_entries[key] as GSBrowserEntry).is_online():
 			total += 1
 	return total
 
@@ -490,14 +490,14 @@ func is_refreshing() -> bool:
 
 # --- Reading ---------------------------------------------------------------
 
-func entries() -> Array[DotBrowserEntry]:
-	var out: Array[DotBrowserEntry] = []
+func entries() -> Array[GSBrowserEntry]:
+	var out: Array[GSBrowserEntry] = []
 	for key in _order:
 		out.append(_entries[key])
 	return out
 
 
-func entry_for(key: String) -> DotBrowserEntry:
+func entry_for(key: String) -> GSBrowserEntry:
 	if _entries.has(key):
 		return _entries[key]
 	return null
@@ -508,12 +508,12 @@ func count() -> int:
 
 
 ## The rows to draw: filtered and ordered.
-func filtered() -> Array[DotBrowserEntry]:
+func filtered() -> Array[GSBrowserEntry]:
 	var saved := favourites.keys()
-	var out: Array[DotBrowserEntry] = []
+	var out: Array[GSBrowserEntry] = []
 
 	for key in _order:
-		var entry: DotBrowserEntry = _entries[key]
+		var entry: GSBrowserEntry = _entries[key]
 		if filter.matches(entry, saved.has(key)):
 			out.append(entry)
 
@@ -529,14 +529,14 @@ func clear() -> void:
 
 # --- Favourites ------------------------------------------------------------
 
-func favourite(key: String) -> DotResult:
+func favourite(key: String) -> GSResult:
 	var entry := entry_for(key)
 	if entry == null:
-		return DotResult.fail(DotError.CODE_INVALID, "No such server.", key)
+		return GSResult.fail(GSError.CODE_INVALID, "No such server.", key)
 	return favourites.add(entry)
 
 
-func unfavourite(key: String) -> DotResult:
+func unfavourite(key: String) -> GSResult:
 	return favourites.remove(key)
 
 
@@ -554,17 +554,17 @@ func load_favourites() -> int:
 	return added
 
 
-func note_connected(key: String) -> DotResult:
+func note_connected(key: String) -> GSResult:
 	var entry := entry_for(key)
 	if entry == null:
-		return DotResult.fail(DotError.CODE_INVALID, "No such server.", key)
+		return GSResult.fail(GSError.CODE_INVALID, "No such server.", key)
 	return favourites.note_visit(entry)
 
 
 func _exit_tree() -> void:
 	cancel()
 	if register_as != &"":
-		DotRegistry.unregister_instance(register_as, self)
+		GSRegistry.unregister_instance(register_as, self)
 
 
 func describe() -> Dictionary:

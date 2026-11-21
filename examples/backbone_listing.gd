@@ -10,7 +10,7 @@ extends Node
 ##
 ## The round trip the selftest cannot make: the suite reads canned pages, and this reads
 ## website-city's [code]GET /api/content/server/list[/code] over HTTP, then queries each
-## address it got. Configured like any game's browser would be ([DotBrowserBackboneConfig]:
+## address it got. Configured like any game's browser would be ([GSBrowserBackboneConfig]:
 ## [code]--browser-*[/code] or [code]DOT_BROWSER_*[/code]); with no URL it says so and exits
 ## 2, because a run that read nothing must not look like a site with no servers.
 ##
@@ -21,18 +21,18 @@ const CHANNEL := "browser.example"
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.WARN)
+	GSLog.set_level(GSLog.Level.WARN)
 	await _run()
 
 
 func _run() -> void:
-	var made := DotBrowserSourceBackbone.from_config()
+	var made := GSBrowserSourceBackbone.from_config()
 	if not made.ok:
 		print("configuration: %s" % str(made.error))
 		get_tree().quit(2)
 		return
 
-	var source: DotBrowserSourceBackbone = made.value
+	var source: GSBrowserSourceBackbone = made.value
 	if not source.is_available():
 		print("No backbone URL: pass --browser-backbone-url=<site origin>.")
 		get_tree().quit(2)
@@ -43,7 +43,7 @@ func _run() -> void:
 		if arg.begins_with("--expect="):
 			expect = arg.trim_prefix("--expect=")
 
-	var browser := DotBrowser.new()
+	var browser := GSBrowser.new()
 	browser.register_as = &""
 	browser.timeout_ms = 1500
 	browser.retries = 1
@@ -53,7 +53,7 @@ func _run() -> void:
 	add_child(browser)
 
 	var failed_with: Array[String] = []
-	browser.source_failed.connect(func(_name: StringName, error: DotError) -> void:
+	browser.source_failed.connect(func(_name: StringName, error: GSError) -> void:
 		failed_with.append(str(error))
 	)
 
@@ -78,7 +78,7 @@ func _run() -> void:
 			print("    -> expected server %s" % ("answered" if found_expected else "did NOT answer"))
 
 	print("%d servers from the listing, %d answering" % [listed, browser.filtered().filter(
-		func(e: DotBrowserEntry) -> bool: return e.is_online()
+		func(e: GSBrowserEntry) -> bool: return e.is_online()
 	).size()])
 
 	var ok := listed > 0 and (expect == "" or found_expected)

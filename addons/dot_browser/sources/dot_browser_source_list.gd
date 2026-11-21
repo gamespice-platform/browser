@@ -1,5 +1,5 @@
-class_name DotBrowserSourceList
-extends DotBrowserSource
+class_name GSBrowserSourceList
+extends GSBrowserSource
 
 ## A fixed list of addresses: typed in, shipped in a file, or pasted by a player.
 ##
@@ -18,12 +18,12 @@ var name_override: StringName = &"list"
 ## A JSON file to read instead of, or as well as, [member addresses].
 ##
 ## Either an array of address strings, or an array of objects in
-## [method DotBrowserTarget.from_dictionary]'s shape — a community shipping a list
+## [method GSBrowserTarget.from_dictionary]'s shape — a community shipping a list
 ## with per-server query ports needs the second.
 var file_path: String = ""
 
 
-static func of(entries: PackedStringArray, port: int = 27015) -> DotBrowserSourceList:
+static func of(entries: PackedStringArray, port: int = 27015) -> GSBrowserSourceList:
 	# Not this class's own name. A script that names itself in an expression, loaded after
 	# its base, cuts Godot 4.7.2's exit teardown short and leaks every script loaded before
 	# it. See docs/gdscript-hazards.md, "A script that names itself".
@@ -33,7 +33,7 @@ static func of(entries: PackedStringArray, port: int = 27015) -> DotBrowserSourc
 	return out
 
 
-static func of_file(path: String) -> DotBrowserSourceList:
+static func of_file(path: String) -> GSBrowserSourceList:
 	var out := new()
 	out.file_path = path
 	return out
@@ -43,12 +43,12 @@ func _source_name() -> StringName:
 	return name_override
 
 
-func _fetch() -> DotResult:
-	var out: Array[DotBrowserTarget] = []
+func _fetch() -> GSResult:
+	var out: Array[GSBrowserTarget] = []
 	var refused := PackedStringArray()
 
 	for raw in addresses:
-		var parsed := DotBrowserTarget.parse(str(raw), default_port)
+		var parsed := GSBrowserTarget.parse(str(raw), default_port)
 		if parsed.ok:
 			out.append(parsed.value)
 		else:
@@ -63,34 +63,34 @@ func _fetch() -> DotResult:
 		# Reported and not fatal. One typo in a shipped list must not take out every
 		# other server in it, and a list that silently loses entries is one nobody
 		# can debug.
-		DotLog.warn(CHANNEL, "some server addresses could not be parsed", {
+		GSLog.warn(CHANNEL, "some server addresses could not be parsed", {
 			"source": String(source_name()), "addresses": Array(refused)
 		})
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
-func _from_file(out: Array[DotBrowserTarget], refused: PackedStringArray) -> DotResult:
+func _from_file(out: Array[GSBrowserTarget], refused: PackedStringArray) -> GSResult:
 	if not FileAccess.file_exists(file_path):
-		return DotResult.fail(
-			DotError.CODE_IO, "No such server list file.", file_path
+		return GSResult.fail(
+			GSError.CODE_IO, "No such server list file.", file_path
 		)
 
-	var read := DotPaths.read_json(file_path)
+	var read := GSPaths.read_json(file_path)
 	if not read.ok:
 		return read.wrap("Could not read the server list.")
 
 	var data: Variant = read.value
 	if typeof(data) != TYPE_ARRAY:
-		return DotResult.fail(
-			DotError.CODE_PARSE,
+		return GSResult.fail(
+			GSError.CODE_PARSE,
 			"A server list file is an array of addresses or objects.",
 			file_path
 		)
 
 	for row in (data as Array):
 		if typeof(row) == TYPE_STRING:
-			var parsed := DotBrowserTarget.parse(str(row), default_port)
+			var parsed := GSBrowserTarget.parse(str(row), default_port)
 			if parsed.ok:
 				out.append(parsed.value)
 			else:
@@ -98,10 +98,10 @@ func _from_file(out: Array[DotBrowserTarget], refused: PackedStringArray) -> Dot
 			continue
 
 		if typeof(row) == TYPE_DICTIONARY:
-			var built := DotBrowserTarget.from_dictionary(row as Dictionary)
+			var built := GSBrowserTarget.from_dictionary(row as Dictionary)
 			if built.ok:
 				out.append(built.value)
 			else:
 				refused.append(JSON.stringify(row))
 
-	return DotResult.success(out)
+	return GSResult.success(out)

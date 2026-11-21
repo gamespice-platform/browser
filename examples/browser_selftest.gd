@@ -28,7 +28,7 @@ extends Node
 const SECTIONS := 12
 const CHECKS := 143
 
-## Produced by GameSpice Server's DotQueryProtocol.build_request(TYPE_QUERY, 7,
+## Produced by GameSpice Server's GSQueryProtocol.build_request(TYPE_QUERY, 7,
 ## 0x0123456789abcdef, {"sections": ["info"]}, true).
 const GOLDEN_QUERY := "445150310104070000000000000001000000efcdab89674523017b2273656374696f6e73223a5b22696e666f225d7d"
 
@@ -76,7 +76,7 @@ class FakeDqpServer extends Node:
 			var from := socket.get_packet_ip()
 			var from_port := socket.get_packet_port()
 
-			if not DotBrowserDqp.looks_like_dqp(data):
+			if not GSBrowserDqp.looks_like_dqp(data):
 				continue
 
 			var type := data.decode_u8(4)
@@ -84,22 +84,22 @@ class FakeDqpServer extends Node:
 
 			socket.set_dest_address(from, from_port)
 
-			if type == DotBrowserDqp.TYPE_CHALLENGE_REQUEST:
+			if type == GSBrowserDqp.TYPE_CHALLENGE_REQUEST:
 				if not answer_challenge:
 					continue
 				socket.put_packet(_packet(
-					DotBrowserDqp.TYPE_CHALLENGE, txn, 0x1122334455667788, PackedByteArray()
+					GSBrowserDqp.TYPE_CHALLENGE, txn, 0x1122334455667788, PackedByteArray()
 				))
 				continue
 
-			if type == DotBrowserDqp.TYPE_QUERY:
+			if type == GSBrowserDqp.TYPE_QUERY:
 				queries_seen += 1
-				var payload := data.slice(DotBrowserDqp.HEADER_BYTES)
+				var payload := data.slice(GSBrowserDqp.HEADER_BYTES)
 				var parsed: Variant = JSON.parse_string(payload.get_string_from_utf8())
 				if typeof(parsed) == TYPE_DICTIONARY:
 					last_if_rev = int((parsed as Dictionary).get("if_rev", 0))
 				socket.put_packet(_packet(
-					DotBrowserDqp.TYPE_RESULT, txn, 0,
+					GSBrowserDqp.TYPE_RESULT, txn, 0,
 					JSON.stringify(body).to_utf8_buffer()
 				))
 
@@ -107,7 +107,7 @@ class FakeDqpServer extends Node:
 		type: int, txn: int, cookie: int, payload: PackedByteArray
 	) -> PackedByteArray:
 		var out := PackedByteArray()
-		out.resize(DotBrowserDqp.HEADER_BYTES)
+		out.resize(GSBrowserDqp.HEADER_BYTES)
 		out.encode_u8(0, 68)
 		out.encode_u8(1, 81)
 		out.encode_u8(2, 80)
@@ -128,7 +128,7 @@ class FakeDqpServer extends Node:
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	await _run()
 
 
@@ -174,33 +174,33 @@ func _run() -> void:
 func _test_golden_bytes() -> void:
 	_section("DQP: golden bytes from dot-server's encoder")
 
-	var query := DotBrowserDqp.build_request(
-		DotBrowserDqp.TYPE_QUERY, 7, TEST_COOKIE, {"sections": ["info"]}, true
+	var query := GSBrowserDqp.build_request(
+		GSBrowserDqp.TYPE_QUERY, 7, TEST_COOKIE, {"sections": ["info"]}, true
 	)
 	_check(_hex(query) == GOLDEN_QUERY, "a query request is byte-identical to the one dot-server builds")
 
-	var ping := DotBrowserDqp.build_request(
-		DotBrowserDqp.TYPE_PING, 1, 0, {}, false
+	var ping := GSBrowserDqp.build_request(
+		GSBrowserDqp.TYPE_PING, 1, 0, {}, false
 	)
 	_check(_hex(ping) == GOLDEN_PING, "so is a ping, with no accept-gzip bit")
 
-	var challenge := DotBrowserDqp.parse(_bytes(GOLDEN_CHALLENGE))
+	var challenge := GSBrowserDqp.parse(_bytes(GOLDEN_CHALLENGE))
 	_check(challenge.ok, "a challenge response parses")
 	var head: Dictionary = challenge.value
-	_check(int(head["type"]) == DotBrowserDqp.TYPE_CHALLENGE, "as a challenge")
+	_check(int(head["type"]) == GSBrowserDqp.TYPE_CHALLENGE, "as a challenge")
 	_check(int(head["txn"]) == 7, "with the transaction echoed")
 	_check(int(head["challenge"]) == TEST_COOKIE, "and the cookie read back whole")
 
-	var result := DotBrowserDqp.parse(_bytes(GOLDEN_RESULT))
+	var result := GSBrowserDqp.parse(_bytes(GOLDEN_RESULT))
 	_check(result.ok, "a result response parses")
 	var body: Dictionary = (result.value as Dictionary)["body"]
 	_check(int(body.get("rev", 0)) == 42, "and its JSON body comes out")
 
-	var request_reply := DotBrowserDqp.parse(query)
+	var request_reply := GSBrowserDqp.parse(query)
 	_check(not request_reply.ok, "a request arriving where a response was expected is refused, not answered")
 
-	var junk := DotBrowserDqp.parse("hello".to_utf8_buffer())
-	_check(not junk.ok and junk.code() == DotError.CODE_PARSE, "junk is not DQP")
+	var junk := GSBrowserDqp.parse("hello".to_utf8_buffer())
+	_check(not junk.ok and junk.code() == GSError.CODE_PARSE, "junk is not DQP")
 
 
 func _test_dqp_fragments() -> void:
@@ -212,7 +212,7 @@ func _test_dqp_fragments() -> void:
 	_check(fragments.size() == 3, "a large body needs three datagrams")
 
 	var shuffled: Array = [fragments[2], fragments[0], fragments[1]]
-	var joined := DotBrowserDqp.reassemble(shuffled)
+	var joined := GSBrowserDqp.reassemble(shuffled)
 	_check(joined.ok, "they reassemble in any order")
 	_check(int((joined.value as Dictionary).get("rev", 0)) == 1, "into the body that was sent")
 
@@ -223,16 +223,16 @@ func _test_dqp_fragments() -> void:
 		JSON.stringify({"rev": 999}).to_utf8_buffer(), 77, 0
 	)[0]
 	var polluted: Array = [fragments[0], foreign, fragments[1]]
-	var refused := DotBrowserDqp.reassemble(polluted)
+	var refused := GSBrowserDqp.reassemble(polluted)
 	_check(not refused.ok, "a fragment from another response is discarded rather than stitched in")
 
 	var short: Array = [fragments[0], fragments[1]]
-	var incomplete := DotBrowserDqp.reassemble(short)
-	_check(not incomplete.ok and incomplete.code() == DotError.CODE_TIMEOUT, "a missing fragment is a timeout, not a truncated body")
+	var incomplete := GSBrowserDqp.reassemble(short)
+	_check(not incomplete.ok and incomplete.code() == GSError.CODE_TIMEOUT, "a missing fragment is a timeout, not a truncated body")
 
 	var packed := payload.compress(FileAccess.COMPRESSION_GZIP)
-	var gzipped := _fragment(packed, 55, DotBrowserDqp.FLAG_GZIP)
-	var inflated := DotBrowserDqp.reassemble(gzipped)
+	var gzipped := _fragment(packed, 55, GSBrowserDqp.FLAG_GZIP)
+	var inflated := GSBrowserDqp.reassemble(gzipped)
 	_check(inflated.ok, "a gzip response reassembles and inflates")
 
 	# This one makes the engine print "incorrect header check" and "Decompression
@@ -240,8 +240,8 @@ func _test_dqp_fragments() -> void:
 	# a failure in the run — and it is noted here because this family's own rule is to
 	# read a suite's stderr even when it exits 0, which means the noise a suite makes
 	# on purpose has to be labelled or it costs somebody an afternoon.
-	var lying := _fragment("not gzip at all".to_utf8_buffer(), 56, DotBrowserDqp.FLAG_GZIP)
-	var failed := DotBrowserDqp.reassemble(lying)
+	var lying := _fragment("not gzip at all".to_utf8_buffer(), 56, GSBrowserDqp.FLAG_GZIP)
+	var failed := GSBrowserDqp.reassemble(lying)
 	_check(not failed.ok, "a payload that claims gzip and is not fails rather than producing garbage")
 
 
@@ -251,7 +251,7 @@ func _test_a2s_info() -> void:
 	_section("A2S: info")
 
 	var data := _a2s_info(12, 32, 4, "dev,eu,dqp:27019")
-	var parsed := DotBrowserA2s.parse_info(data)
+	var parsed := GSBrowserA2s.parse_info(data)
 	_check(parsed.ok, "an A2S_INFO response parses")
 
 	var info: Dictionary = parsed.value
@@ -275,18 +275,18 @@ func _test_a2s_info() -> void:
 	_check(int(info.get("dqp_port", 0)) == 27019, "and a dot server's richer protocol is found in the one extensible field")
 
 	var impossible := _a2s_info(2, 32, 9, "")
-	var clamped: Dictionary = DotBrowserA2s.parse_info(impossible).value
+	var clamped: Dictionary = GSBrowserA2s.parse_info(impossible).value
 	_check(int(clamped["players"]) == 0, "more bots than players clamps at zero rather than going negative")
 
 	# A response that ends early must fail rather than hand back a plausible value
 	# for the field after the overrun. GameSpice Net shipped a reader whose exhaustion was
 	# not sticky and that is exactly what it did.
 	var truncated := data.slice(0, 20)
-	var short := DotBrowserA2s.parse_info(truncated)
+	var short := GSBrowserA2s.parse_info(truncated)
 	_check(not short.ok, "a response that ends early is refused, not read past")
 
 	var wrong := PackedByteArray([0xFF, 0xFF, 0xFF, 0xFF, 0x44])
-	_check(not DotBrowserA2s.parse_info(wrong).ok, "a response of the wrong type is refused")
+	_check(not GSBrowserA2s.parse_info(wrong).ok, "a response of the wrong type is refused")
 
 
 func _test_a2s_split() -> void:
@@ -296,15 +296,15 @@ func _test_a2s_split() -> void:
 	var packets := _a2s_split(whole, 4242, 3)
 
 	var shuffled: Array = [packets[1], packets[2], packets[0]]
-	var joined := DotBrowserA2s.reassemble_split(shuffled)
+	var joined := GSBrowserA2s.reassemble_split(shuffled)
 	_check(joined.ok, "split packets reassemble in any order")
 	_check(_hex(joined.value) == _hex(whole), "into exactly the single packet that was split, header included")
 
 	var foreign: PackedByteArray = _a2s_split(whole, 9999, 3)[1]
 	var polluted: Array = [packets[0], foreign, packets[2]]
-	_check(not DotBrowserA2s.reassemble_split(polluted).ok, "a packet from another split response is discarded")
+	_check(not GSBrowserA2s.reassemble_split(polluted).ok, "a packet from another split response is discarded")
 
-	var parsed := DotBrowserA2s.parse_info(joined.value)
+	var parsed := GSBrowserA2s.parse_info(joined.value)
 	_check(parsed.ok, "and the reassembled bytes parse as info")
 
 
@@ -312,51 +312,51 @@ func _test_a2s_split() -> void:
 
 func _test_https_page_urls() -> void:
 	_section("ws urls on an https page")
-	_check(DotBrowserWsClient.page_url("ws://pg01.zeesgames.com:6012", true) == "wss://pg01.zeesgames.com:6012", "ws upgraded to wss")
-	_check(DotBrowserWsClient.page_url("ws://127.0.0.1:27015", true) == "", "loopback skipped")
-	_check(DotBrowserWsClient.page_url("ws://localhost:1", true) == "", "localhost skipped")
-	_check(DotBrowserWsClient.page_url("ws://[::1]:1", true) == "", "ipv6 loopback skipped")
-	_check(DotBrowserWsClient.page_url("ws://127.0.0.1:27015", false) == "ws://127.0.0.1:27015", "http page unchanged")
-	_check(DotBrowserWsClient.page_url("wss://a.b:1", true) == "wss://a.b:1", "wss unchanged")
+	_check(GSBrowserWsClient.page_url("ws://pg01.zeesgames.com:6012", true) == "wss://pg01.zeesgames.com:6012", "ws upgraded to wss")
+	_check(GSBrowserWsClient.page_url("ws://127.0.0.1:27015", true) == "", "loopback skipped")
+	_check(GSBrowserWsClient.page_url("ws://localhost:1", true) == "", "localhost skipped")
+	_check(GSBrowserWsClient.page_url("ws://[::1]:1", true) == "", "ipv6 loopback skipped")
+	_check(GSBrowserWsClient.page_url("ws://127.0.0.1:27015", false) == "ws://127.0.0.1:27015", "http page unchanged")
+	_check(GSBrowserWsClient.page_url("wss://a.b:1", true) == "wss://a.b:1", "wss unchanged")
 
 
 func _test_targets() -> void:
 	_section("targets")
 
-	var plain := DotBrowserTarget.parse("example.com:27016")
+	var plain := GSBrowserTarget.parse("example.com:27016")
 	_check(plain.ok, "host:port parses")
-	var t: DotBrowserTarget = plain.value
+	var t: GSBrowserTarget = plain.value
 	_check(t.address == "example.com" and t.port == 27016, "into a host and a port")
 
-	var bare := DotBrowserTarget.parse("example.com")
-	_check((bare.value as DotBrowserTarget).port == 27015, "a bare host takes the default port")
+	var bare := GSBrowserTarget.parse("example.com")
+	_check((bare.value as GSBrowserTarget).port == 27015, "a bare host takes the default port")
 
 	# Splitting on the last colon turns `[::1]:27015` into a host of `[` unless the
 	# brackets are handled first, and splitting on the first turns every IPv6 address
 	# into one.
-	var six := DotBrowserTarget.parse("[::1]:27015")
+	var six := GSBrowserTarget.parse("[::1]:27015")
 	_check(six.ok, "a bracketed IPv6 address parses")
-	var t6: DotBrowserTarget = six.value
+	var t6: GSBrowserTarget = six.value
 	_check(t6.address == "::1" and t6.port == 27015, "into the address and the port")
 	_check(t6.join_address() == "[::1]:27015", "and goes back into brackets to connect")
 
-	var loose := DotBrowserTarget.parse("fe80::1")
-	_check((loose.value as DotBrowserTarget).address == "fe80::1", "an unbracketed IPv6 address is not mistaken for a port")
+	var loose := GSBrowserTarget.parse("fe80::1")
+	_check((loose.value as GSBrowserTarget).address == "fe80::1", "an unbracketed IPv6 address is not mistaken for a port")
 
-	_check(not DotBrowserTarget.parse("").ok, "nothing is not an address")
-	_check(not DotBrowserTarget.parse("host:99999").ok, "and that is not a port")
+	_check(not GSBrowserTarget.parse("").ok, "nothing is not an address")
+	_check(not GSBrowserTarget.parse("host:99999").ok, "and that is not a port")
 
-	var moved := DotBrowserTarget.make("h", 27015)
+	var moved := GSBrowserTarget.make("h", 27015)
 	moved.query_port = 27019
 	_check(moved.effective_query_port() == 27019, "a query port overrides the game port")
 	_check(moved.key() == "h:27015", "but identity is the game port: a moved query port must not make a second row")
 
-	var round_trip := DotBrowserTarget.from_dictionary(moved.to_dictionary())
+	var round_trip := GSBrowserTarget.from_dictionary(moved.to_dictionary())
 	_check(round_trip.ok, "a target round-trips through its dictionary")
-	_check((round_trip.value as DotBrowserTarget).query_port == 27019, "with the query port intact")
+	_check((round_trip.value as GSBrowserTarget).query_port == 27019, "with the query port intact")
 
 	_check(
-		not DotBrowserTarget.from_dictionary(
+		not GSBrowserTarget.from_dictionary(
 			{"address": "h", "protocol": "carrier pigeon"}
 		).ok,
 		"an unknown protocol name is refused rather than defaulted"
@@ -366,8 +366,8 @@ func _test_targets() -> void:
 func _test_entries() -> void:
 	_section("entries")
 
-	var entry := DotBrowserEntry.of(DotBrowserTarget.make("127.0.0.1", 27015))
-	_check(entry.status == DotBrowserEntry.Status.UNKNOWN, "an entry starts unknown")
+	var entry := GSBrowserEntry.of(GSBrowserTarget.make("127.0.0.1", 27015))
+	_check(entry.status == GSBrowserEntry.Status.UNKNOWN, "an entry starts unknown")
 
 	var applied := entry.apply_dqp({
 		"rev": 12,
@@ -402,8 +402,8 @@ func _test_entries() -> void:
 
 	var name := entry.name
 	var players := entry.players
-	entry.mark_offline(DotError.make(DotError.CODE_TIMEOUT, "no answer"))
-	_check(entry.status == DotBrowserEntry.Status.OFFLINE, "a timeout marks it offline")
+	entry.mark_offline(GSError.make(GSError.CODE_TIMEOUT, "no answer"))
+	_check(entry.status == GSBrowserEntry.Status.OFFLINE, "a timeout marks it offline")
 	_check(
 		entry.name == name and entry.players == players,
 		"and leaves the last known figures alone: a row that flickers to zero on one "
@@ -411,37 +411,37 @@ func _test_entries() -> void:
 	)
 	_check(entry.ping_ms == -1, "the ping, which is now unknown, is cleared")
 
-	var long := DotBrowserEntry.of(DotBrowserTarget.make("h", 1))
+	var long := GSBrowserEntry.of(GSBrowserTarget.make("h", 1))
 	long.apply_dqp({"sections": {"info": {"name": "x".repeat(9000)}}})
-	_check(long.name.length() <= DotBrowserEntry.MAX_TEXT, "a hostname from a stranger is capped on the way in")
+	_check(long.name.length() <= GSBrowserEntry.MAX_TEXT, "a hostname from a stranger is capped on the way in")
 
 	var row := entry.to_row()
 	_check(row["address"] == entry.join_address() and row["name"] == name, "a row for a list view carries the join address and name")
 	_check(row["status"] == "offline" and row["players"] == 8 and row["bots"] == 4,
 		"its status by name, and humans and bots apart")
 
-	var saved := DotBrowserEntry.from_dictionary(entry.to_dictionary())
+	var saved := GSBrowserEntry.from_dictionary(entry.to_dictionary())
 	_check(saved.ok, "an entry round-trips through its saved form")
-	_check((saved.value as DotBrowserEntry).key() == entry.key(), "keeping its identity")
+	_check((saved.value as GSBrowserEntry).key() == entry.key(), "keeping its identity")
 
 
 func _test_filter() -> void:
 	_section("filter and sort")
 
-	var rows: Array[DotBrowserEntry] = [
+	var rows: Array[GSBrowserEntry] = [
 		_row("a", 27001, "Alpha", "dm_one", 0, 16, 40, ["eu"]),
 		_row("b", 27002, "Bravo", "dm_two", 12, 12, 80, ["eu", "hard"]),
 		_row("c", 27003, "Cosmo", "dm_one", 4, 16, 20, ["na"]),
 	]
 
 	var never := _row("d", 27004, "Delta", "dm_one", 0, 16, -1, [])
-	never.status = DotBrowserEntry.Status.ONLINE
+	never.status = GSBrowserEntry.Status.ONLINE
 	rows.append(never)
 
-	var filter := DotBrowserFilter.new()
+	var filter := GSBrowserFilter.new()
 
 	filter.hide_empty = true
-	var busy: Array[DotBrowserEntry] = []
+	var busy: Array[GSBrowserEntry] = []
 	for row in rows:
 		if filter.matches(row):
 			busy.append(row)
@@ -449,7 +449,7 @@ func _test_filter() -> void:
 
 	filter.hide_empty = false
 	filter.hide_full = true
-	var open: Array[DotBrowserEntry] = []
+	var open: Array[GSBrowserEntry] = []
 	for row in rows:
 		if filter.matches(row):
 			open.append(row)
@@ -469,13 +469,13 @@ func _test_filter() -> void:
 	_check(filter.matches(never), "and does not exclude one whose ping was never measured")
 
 	filter.max_ping = 0
-	filter.sort = DotBrowserFilter.Sort.PING
+	filter.sort = GSBrowserFilter.Sort.PING
 	var ordered := rows.duplicate()
 	filter.apply_sort(ordered)
 	_check(ordered[0].name == "Cosmo", "sorting by ping puts the nearest first")
 	_check(ordered[ordered.size() - 1].name == "Delta", "and an unmeasured ping last, not first: -1 is not 'faster than everything'")
 
-	filter.sort = DotBrowserFilter.Sort.PLAYERS
+	filter.sort = GSBrowserFilter.Sort.PLAYERS
 	var busiest := rows.duplicate()
 	filter.apply_sort(busiest)
 	_check(busiest[0].name == "Bravo", "sorting by players puts the busiest first")
@@ -487,11 +487,11 @@ func _test_filter() -> void:
 
 	# Two servers with the same ping must not swap places on every refresh, or the
 	# row a player is about to click moves out from under them.
-	var tied: Array[DotBrowserEntry] = [
+	var tied: Array[GSBrowserEntry] = [
 		_row("z", 1, "Zed", "m", 1, 8, 30, []),
 		_row("y", 1, "Why", "m", 1, 8, 30, []),
 	]
-	filter.sort = DotBrowserFilter.Sort.PING
+	filter.sort = GSBrowserFilter.Sort.PING
 	filter.apply_sort(tied)
 	var first := tied[0].name
 	filter.apply_sort(tied)
@@ -499,17 +499,17 @@ func _test_filter() -> void:
 	_test_best_sort(filter)
 
 
-## Best ranking: [DotBrowserScore] through the filter's BEST sort.
-func _test_best_sort(filter: DotBrowserFilter) -> void:
+## Best ranking: [GSBrowserScore] through the filter's BEST sort.
+func _test_best_sort(filter: GSBrowserFilter) -> void:
 	# Best: busy-but-not-full and near beats empty and far; a party that does not fit ranks last.
-	var best: Array[DotBrowserEntry] = [
+	var best: Array[GSBrowserEntry] = [
 		_row("e", 1, "Empty", "m", 0, 16, 20, []),
 		_row("f", 1, "Full", "m", 16, 16, 20, []),
 		_row("g", 1, "Good", "m", 10, 16, 40, []),
 		_row("h", 1, "Far", "m", 10, 16, 250, []),
 		_row("i", 1, "Tight", "m", 15, 16, 20, []),
 	]
-	filter.sort = DotBrowserFilter.Sort.BEST
+	filter.sort = GSBrowserFilter.Sort.BEST
 	filter.apply_sort(best)
 	_check(best[0].name == "Good", "best puts a busy, near server first")
 	_check(best[best.size() - 1].name == "Full", "best puts a full server last")
@@ -520,9 +520,9 @@ func _test_best_sort(filter: DotBrowserFilter) -> void:
 	filter.friend_counts = {"h:1": 2}
 	filter.apply_sort(best)
 	_check(best[0].name == "Far" or best[0].name == "Good", "friends raise a server")
-	_check(DotBrowserScore.score(_row("u", 1, "U", "m", 5, 16, -1, [])) > 0.0, "an unmeasured ping still scores")
+	_check(GSBrowserScore.score(_row("u", 1, "U", "m", 5, 16, -1, [])) > 0.0, "an unmeasured ping still scores")
 	filter.friend_counts = {}
-	filter.sort = DotBrowserFilter.Sort.PING
+	filter.sort = GSBrowserFilter.Sort.PING
 
 
 func _test_favourites() -> void:
@@ -532,27 +532,27 @@ func _test_favourites() -> void:
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
-	var saved := DotBrowserFavourites.new(path)
+	var saved := GSBrowserFavourites.new(path)
 	_check(saved.load_from_disk().ok, "a missing file is not a failure on a first run")
 
 	var entry := _row("h", 27015, "Home", "dm_one", 3, 16, 12, ["eu"])
 	_check(saved.add(entry).ok, "a favourite saves")
 	_check(saved.has("h:27015"), "and is remembered")
 
-	var reloaded := DotBrowserFavourites.new(path)
+	var reloaded := GSBrowserFavourites.new(path)
 	_check(reloaded.load_from_disk().ok, "the file reads back")
 	_check(reloaded.has("h:27015"), "with the favourite in it")
-	_check((reloaded.entries()[0] as DotBrowserEntry).name == "Home", "and the name it was saved with")
+	_check((reloaded.entries()[0] as GSBrowserEntry).name == "Home", "and the name it was saved with")
 
 	reloaded.note_visit(entry)
 	reloaded.note_visit(_row("i", 27016, "Away", "dm_two", 1, 8, 30, []))
 	reloaded.note_visit(entry)
 	_check(reloaded.history().size() == 2, "visiting the same server twice moves it rather than adding it again")
-	_check((reloaded.history()[0] as DotBrowserEntry).name == "Home", "and the most recent is first")
+	_check((reloaded.history()[0] as GSBrowserEntry).name == "Home", "and the most recent is first")
 
-	for i in DotBrowserFavourites.MAX_HISTORY + 10:
+	for i in GSBrowserFavourites.MAX_HISTORY + 10:
 		reloaded.note_visit(_row("p%d" % i, 1000 + i, "S%d" % i, "m", 0, 8, 10, []))
-	_check(reloaded.history().size() == DotBrowserFavourites.MAX_HISTORY, "history is capped")
+	_check(reloaded.history().size() == GSBrowserFavourites.MAX_HISTORY, "history is capped")
 	_check(reloaded.has("h:27015"), "and capping history does not touch a favourite")
 
 	reloaded.remove("h:27015")
@@ -562,36 +562,36 @@ func _test_favourites() -> void:
 func _test_sources() -> void:
 	_section("sources")
 
-	var list := DotBrowserSourceList.of(PackedStringArray([
+	var list := GSBrowserSourceList.of(PackedStringArray([
 		"127.0.0.1:27015", "example.com", "not a host:::", "",
 	]))
 
-	var res: DotResult = await list.fetch()
+	var res: GSResult = await list.fetch()
 	_check(res.ok, "a list source with a bad entry in it still produces the good ones")
 
 	var targets: Array = res.value
 	_check(targets.size() == 2, "and only the good ones")
-	_check((targets[0] as DotBrowserTarget).source == &"list", "every target is stamped with the source that produced it")
+	_check((targets[0] as GSBrowserTarget).source == &"list", "every target is stamped with the source that produced it")
 
 	var file_path := "user://dot_browser_selftest/list.json"
-	DotPaths.write_json(file_path, [
+	GSPaths.write_json(file_path, [
 		"10.0.0.1:27015",
 		{"address": "10.0.0.2", "port": 27016, "query_port": 27019},
 	])
 
-	var from_file := DotBrowserSourceList.of_file(file_path)
-	var loaded: DotResult = await from_file.fetch()
+	var from_file := GSBrowserSourceList.of_file(file_path)
+	var loaded: GSResult = await from_file.fetch()
 	_check(loaded.ok, "a list file loads")
 	var rows: Array = loaded.value
 	_check(rows.size() == 2, "both forms of entry")
-	_check((rows[1] as DotBrowserTarget).query_port == 27019, "including the object form's query port")
+	_check((rows[1] as GSBrowserTarget).query_port == 27019, "including the object form's query port")
 
-	var missing := DotBrowserSourceList.of_file("user://nothing/here.json")
-	var failed: DotResult = await missing.fetch()
-	_check(not failed.ok and failed.code() == DotError.CODE_IO, "a missing file fails")
+	var missing := GSBrowserSourceList.of_file("user://nothing/here.json")
+	var failed: GSResult = await missing.fetch()
+	_check(not failed.ok and failed.code() == GSError.CODE_IO, "a missing file fails")
 
-	var base := DotBrowserSource.new()
-	var unimplemented: DotResult = await base.fetch()
+	var base := GSBrowserSource.new()
+	var unimplemented: GSResult = await base.fetch()
 	_check(not unimplemented.ok, "the base source fetches nothing")
 
 
@@ -603,26 +603,26 @@ class FakeListing extends RefCounted:
 	var urls: PackedStringArray = PackedStringArray()
 	var fail_with: int = 0
 
-	func get_json(url: String, _headers: Dictionary = {}) -> DotResult:
+	func get_json(url: String, _headers: Dictionary = {}) -> GSResult:
 		urls.append(url)
 		if fail_with != 0:
-			return DotResult.fail(DotError.CODE_HTTP, "No such app.", str(fail_with))
+			return GSResult.fail(GSError.CODE_HTTP, "No such app.", str(fail_with))
 		var page := int(url.get_slice("page=", 1).get_slice("&", 0))
-		return DotResult.success(pages[page - 1] if page >= 1 and page <= pages.size() else {})
+		return GSResult.success(pages[page - 1] if page >= 1 and page <= pages.size() else {})
 
 
 func _test_backbone() -> void:
 	_section("the site's server listing")
 
-	var off := DotBrowserSourceBackbone.new()
+	var off := GSBrowserSourceBackbone.new()
 	_check(not off.is_available(), "the backbone source is off with no URL")
-	var refused: DotResult = await off.fetch()
+	var refused: GSResult = await off.fetch()
 	_check(
-		not refused.ok and refused.code() == DotError.CODE_STATE,
+		not refused.ok and refused.code() == GSError.CODE_STATE,
 		"and says so rather than producing an empty list that looks like no servers"
 	)
 
-	var bad := DotBrowserBackboneConfig.new()
+	var bad := GSBrowserBackboneConfig.new()
 	bad.backbone_url = "example.com"
 	_check(not bad.validate().ok, "a URL with no scheme is refused at load")
 
@@ -647,11 +647,11 @@ func _test_backbone() -> void:
 		},
 	]
 
-	var source := DotBrowserSourceBackbone.for_site("http://site.test/", "fc")
+	var source := GSBrowserSourceBackbone.for_site("http://site.test/", "fc")
 	source.http = fake
 	_check(source.is_available(), "a URL turns it on")
 
-	var got: DotResult = await source.fetch()
+	var got: GSResult = await source.fetch()
 	_check(got.ok, "a two-page listing is read")
 	var targets: Array = got.value if got.ok else []
 	_check(fake.urls.size() == 2, "following the pagination to the last page")
@@ -663,49 +663,49 @@ func _test_backbone() -> void:
 	_check(targets.size() == 3, "rows with no host or no port are skipped, a repeat is one row")
 	_check(
 		targets.size() == 3
-			and (targets[0] as DotBrowserTarget).address == "203.0.113.7"
-			and (targets[0] as DotBrowserTarget).port == 6060
-			and (targets[0] as DotBrowserTarget).query_port == 0,
+			and (targets[0] as GSBrowserTarget).address == "203.0.113.7"
+			and (targets[0] as GSBrowserTarget).port == 6060
+			and (targets[0] as GSBrowserTarget).query_port == 0,
 		"a null queryPort means ask on the game port"
 	)
-	_check(targets.size() == 3 and (targets[1] as DotBrowserTarget).query_port == 27016, "a separate query port is kept")
+	_check(targets.size() == 3 and (targets[1] as GSBrowserTarget).query_port == 27016, "a separate query port is kept")
 	_check(
 		targets.size() == 3
-			and (targets[2] as DotBrowserTarget).address == "198.51.100.1"
-			and (targets[2] as DotBrowserTarget).query_port == 0,
+			and (targets[2] as GSBrowserTarget).address == "198.51.100.1"
+			and (targets[2] as GSBrowserTarget).query_port == 0,
 		"a community listing's looser shape still reads"
 	)
 	_check(
-		targets.size() == 3 and (targets[0] as DotBrowserTarget).source == &"backbone",
+		targets.size() == 3 and (targets[0] as GSBrowserTarget).source == &"backbone",
 		"and every target is stamped with the backbone source"
 	)
 
-	var capped := DotBrowserSourceBackbone.for_site("http://site.test", "fc")
+	var capped := GSBrowserSourceBackbone.for_site("http://site.test", "fc")
 	capped.config.max_pages = 1
 	var capped_fake := FakeListing.new()
 	capped_fake.pages = fake.pages
 	capped.http = capped_fake
-	var one_page: DotResult = await capped.fetch()
+	var one_page: GSResult = await capped.fetch()
 	_check(
 		one_page.ok and capped_fake.urls.size() == 1 and (one_page.value as Array).size() == 2,
 		"max_pages caps how much of a long listing is read"
 	)
 
-	var failing := DotBrowserSourceBackbone.for_site("http://site.test", "nope")
+	var failing := GSBrowserSourceBackbone.for_site("http://site.test", "nope")
 	var failing_fake := FakeListing.new()
 	failing_fake.fail_with = 404
 	failing.http = failing_fake
-	var failed: DotResult = await failing.fetch()
-	_check(not failed.ok and failed.code() == DotError.CODE_HTTP, "a site that refuses the game is a failure, not an empty list")
+	var failed: GSResult = await failing.fetch()
+	_check(not failed.ok and failed.code() == GSError.CODE_HTTP, "a site that refuses the game is a failure, not an empty list")
 
-	var browser := DotBrowser.new()
+	var browser := GSBrowser.new()
 	browser.register_as = &""
 	browser.favourites_path = "user://dot_browser_selftest/backbone.json"
 	add_child(browser)
-	var attached := DotBrowserSourceBackbone.for_site("http://127.0.0.1:9", "fc")
+	var attached := GSBrowserSourceBackbone.for_site("http://127.0.0.1:9", "fc")
 	browser.add_source(attached)
 	_check(
-		attached._http() is DotHttp and (attached._http() as Node).get_parent() == browser,
+		attached._http() is GSHttp and (attached._http() as Node).get_parent() == browser,
 		"added to a browser, it puts its own HTTP node under it"
 	)
 	browser.queue_free()
@@ -716,7 +716,7 @@ func _test_backbone() -> void:
 func _test_over_a_socket() -> void:
 	_section("a real query over a real socket")
 
-	if not DotPlatform.has_udp():
+	if not GSPlatform.has_udp():
 		_check(true, "skipped: this platform has no UDP")
 		return
 
@@ -736,20 +736,20 @@ func _test_over_a_socket() -> void:
 	}
 	add_child(server)
 
-	var browser := DotBrowser.new()
+	var browser := GSBrowser.new()
 	browser.register_as = &""
 	browser.timeout_ms = 400
 	browser.retries = 1
 	browser.favourites_path = "user://dot_browser_selftest/live.json"
 	add_child(browser)
 
-	var target := DotBrowserTarget.make("127.0.0.1", server.port)
-	target.protocol = DotBrowserTarget.Protocol.DQP
+	var target := GSBrowserTarget.make("127.0.0.1", server.port)
+	target.protocol = GSBrowserTarget.Protocol.DQP
 
-	var queried: DotResult = await browser.query(target)
+	var queried: GSResult = await browser.query(target)
 	_check(queried.ok, "a query over the loopback answers")
 
-	var entry: DotBrowserEntry = queried.value
+	var entry: GSBrowserEntry = queried.value
 	_check(entry.is_online(), "the server is online")
 	_check(entry.name == "Loopback", "and said what it is")
 	_check(entry.players == 3 and entry.bots == 1, "with its counts")
@@ -757,15 +757,15 @@ func _test_over_a_socket() -> void:
 	_check(entry.answered_with == "dqp", "over DQP")
 
 	# A listing hands out names as well as IPs, and a UDP socket takes only an IP.
-	var named := DotBrowserTarget.make("localhost", server.port)
-	named.protocol = DotBrowserTarget.Protocol.DQP
-	var by_name: DotResult = await browser.query(named)
-	_check(by_name.ok and (by_name.value as DotBrowserEntry).is_online(), "a server listed by name is looked up and asked")
-	var nowhere := DotBrowserTarget.make("no-such-host.invalid", server.port)
-	nowhere.protocol = DotBrowserTarget.Protocol.DQP
-	var unresolved: DotResult = await browser.query(nowhere)
+	var named := GSBrowserTarget.make("localhost", server.port)
+	named.protocol = GSBrowserTarget.Protocol.DQP
+	var by_name: GSResult = await browser.query(named)
+	_check(by_name.ok and (by_name.value as GSBrowserEntry).is_online(), "a server listed by name is looked up and asked")
+	var nowhere := GSBrowserTarget.make("no-such-host.invalid", server.port)
+	nowhere.protocol = GSBrowserTarget.Protocol.DQP
+	var unresolved: GSResult = await browser.query(nowhere)
 	_check(
-		unresolved.ok and not (unresolved.value as DotBrowserEntry).is_online(),
+		unresolved.ok and not (unresolved.value as GSBrowserEntry).is_online(),
 		"and a name that does not resolve is an offline row, not a script error"
 	)
 
@@ -774,34 +774,34 @@ func _test_over_a_socket() -> void:
 	# actually sends it, because a conditional refresh nobody makes conditional is a
 	# feature that never once saves a byte.
 	var before := server.queries_seen
-	var again: DotResult = await browser.refresh_known()
+	var again: GSResult = await browser.refresh_known()
 	_check(again.ok, "a refresh of the known list runs")
 	_check(server.queries_seen > before, "and asks again")
 	_check(server.last_if_rev == 7, "sending the revision it already holds, so an unchanged server answers small")
 
-	var dead := DotBrowserTarget.make("127.0.0.1", 1)
-	dead.protocol = DotBrowserTarget.Protocol.DQP
-	var missed: DotResult = await browser.query(dead)
+	var dead := GSBrowserTarget.make("127.0.0.1", 1)
+	dead.protocol = GSBrowserTarget.Protocol.DQP
+	var missed: GSResult = await browser.query(dead)
 	_check(missed.ok, "a query to nothing still produces an entry")
-	_check(not (missed.value as DotBrowserEntry).is_online(), "marked offline rather than left looking unasked")
+	_check(not (missed.value as GSBrowserEntry).is_online(), "marked offline rather than left looking unasked")
 
 	# A refresh with several servers in it goes through the fan-out path — the one
 	# GDScript has two wrong spellings for. It must finish rather than hang.
 	for i in 6:
-		var extra := DotBrowserTarget.make("127.0.0.1", 1 + i)
-		extra.protocol = DotBrowserTarget.Protocol.DQP
+		var extra := GSBrowserTarget.make("127.0.0.1", 1 + i)
+		extra.protocol = GSBrowserTarget.Protocol.DQP
 		browser.add_target(extra)
 
-	var many: DotResult = await browser.refresh_known()
+	var many: GSResult = await browser.refresh_known()
 	_check(many.ok, "a refresh of eight servers, most of them dead, finishes")
 	_check(not browser.is_refreshing(), "and leaves nothing outstanding")
 	_check(int(many.value) >= 1, "with the one live server still online")
 
 	browser.concurrency = -1
-	var neg: DotResult = await browser.refresh_known()
+	var neg: GSResult = await browser.refresh_known()
 	_check(not neg.ok, "a negative concurrency is refused")
 	browser.concurrency = 0
-	var unl: DotResult = await browser.refresh_known()
+	var unl: GSResult = await browser.refresh_known()
 	_check(unl.ok and not browser.is_refreshing(), "concurrency 0 (unlimited) refreshes everything at once")
 
 	browser.queue_free()
@@ -814,14 +814,14 @@ func _test_over_a_socket() -> void:
 func _row(
 	host: String, port: int, name: String, map: String,
 	players: int, max_players: int, ping: int, tags: Array
-) -> DotBrowserEntry:
-	var entry := DotBrowserEntry.of(DotBrowserTarget.make(host, port))
+) -> GSBrowserEntry:
+	var entry := GSBrowserEntry.of(GSBrowserTarget.make(host, port))
 	entry.name = name
 	entry.map = map
 	entry.players = players
 	entry.max_players = max_players
 	entry.ping_ms = ping
-	entry.status = DotBrowserEntry.Status.ONLINE
+	entry.status = GSBrowserEntry.Status.ONLINE
 	for tag in tags:
 		entry.tags.append(str(tag))
 	return entry
@@ -834,7 +834,7 @@ func _a2s_info(
 ) -> PackedByteArray:
 	var buf := StreamPeerBuffer.new()
 	buf.put_u32(0xFFFFFFFF)
-	buf.put_u8(DotBrowserA2s.RESPONSE_INFO)
+	buf.put_u8(GSBrowserA2s.RESPONSE_INFO)
 	buf.put_u8(17)
 	_cstring(buf, "A dot server")
 	_cstring(buf, "dm_atrium")
@@ -852,9 +852,9 @@ func _a2s_info(
 	buf.put_u8(0)
 	_cstring(buf, "0.1.0")
 
-	var edf := DotBrowserA2s.EDF_PORT
+	var edf := GSBrowserA2s.EDF_PORT
 	if keywords != "":
-		edf |= DotBrowserA2s.EDF_KEYWORDS
+		edf |= GSBrowserA2s.EDF_KEYWORDS
 
 	buf.put_u8(edf)
 	buf.put_u16(27015)
@@ -885,23 +885,23 @@ func _a2s_split(whole: PackedByteArray, id: int, count: int) -> Array:
 
 
 func _fragment(payload: PackedByteArray, response_id: int, flags: int) -> Array:
-	var max_payload := DotBrowserDqp.MAX_DATAGRAM - DotBrowserDqp.HEADER_BYTES
+	var max_payload := GSBrowserDqp.MAX_DATAGRAM - GSBrowserDqp.HEADER_BYTES
 	var total := maxi(1, int(ceil(float(payload.size()) / float(max_payload))))
 	var out: Array = []
 
 	if total > 1:
-		flags |= DotBrowserDqp.FLAG_FRAGMENTED
+		flags |= GSBrowserDqp.FLAG_FRAGMENTED
 
 	for index in total:
 		var start := index * max_payload
 		var chunk := payload.slice(start, mini(start + max_payload, payload.size()))
 		var packet := PackedByteArray()
-		packet.resize(DotBrowserDqp.HEADER_BYTES)
+		packet.resize(GSBrowserDqp.HEADER_BYTES)
 		packet.encode_u8(0, 68)
 		packet.encode_u8(1, 81)
 		packet.encode_u8(2, 80)
 		packet.encode_u8(3, 49)
-		packet.encode_u8(4, DotBrowserDqp.TYPE_RESULT)
+		packet.encode_u8(4, GSBrowserDqp.TYPE_RESULT)
 		packet.encode_u8(5, flags)
 		packet.encode_u32(6, 1)
 		packet.encode_u32(10, response_id)

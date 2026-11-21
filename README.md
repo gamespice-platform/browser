@@ -20,12 +20,12 @@ GameSpice Server Query is what this asks, but it is not a dependency. The wire f
 ## Quick start
 
 ```gdscript
-var browser := DotBrowser.new()
-browser.add_source(DotBrowserSourceList.of(PackedStringArray([
+var browser := GSBrowser.new()
+browser.add_source(GSBrowserSourceList.of(PackedStringArray([
     "eu1.example.com:27015",
     "127.0.0.1:27016",
 ])))
-browser.entry_updated.connect(func(entry: DotBrowserEntry) -> void:
+browser.entry_updated.connect(func(entry: GSBrowserEntry) -> void:
     table.redraw(entry))
 add_child(browser)
 
@@ -50,9 +50,9 @@ A browser knows how to ask a server what it is. A source says which servers exis
 
 | Source | What it gives |
 | --- | --- |
-| `DotBrowserSourceList` | Addresses typed in, or a JSON file you ship. |
-| `DotBrowserSourceBackbone` | A site's server listing (`GET /api/content/server/list`), read anonymously over HTTP. Off until `DotBrowserBackboneConfig.backbone_url` is set (`--browser-backbone-url` or `GS_BROWSER_BACKBONE_URL`). |
-| Your own | Subclass `DotBrowserSource` and return targets. |
+| `GSBrowserSourceList` | Addresses typed in, or a JSON file you ship. |
+| `GSBrowserSourceBackbone` | A site's server listing (`GET /api/content/server/list`), read anonymously over HTTP. Off until `GSBrowserBackboneConfig.backbone_url` is set (`--browser-backbone-url` or `GS_BROWSER_BACKBONE_URL`). |
+| Your own | Subclass `GSBrowserSource` and return targets. |
 
 ## Settings
 

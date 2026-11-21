@@ -1,9 +1,9 @@
-class_name DotBrowserTarget
+class_name GSBrowserTarget
 extends RefCounted
 
 ## An address to ask, and which protocol to ask it in.
 ##
-## Kept apart from [DotBrowserEntry] because the two answer different questions. A
+## Kept apart from [GSBrowserEntry] because the two answer different questions. A
 ## target is what a source hands the browser: somewhere to send a datagram. An entry
 ## is what came back. A list that conflates them cannot represent the two states that
 ## matter most in a server browser — "we have not asked yet" and "we asked and got
@@ -48,8 +48,8 @@ var source: StringName = &""
 
 static func make(
 	p_address: String, p_port: int = 27015, p_protocol: Protocol = Protocol.AUTO
-) -> DotBrowserTarget:
-	var out := DotBrowserTarget.new()
+) -> GSBrowserTarget:
+	var out := GSBrowserTarget.new()
 	out.address = p_address
 	out.port = p_port
 	out.protocol = p_protocol
@@ -57,10 +57,10 @@ static func make(
 
 
 ## Parses [code]host:port[/code], [code]host[/code], or an IPv6 [code][::1]:27015[/code].
-static func parse(text: String, default_port: int = 27015) -> DotResult:
+static func parse(text: String, default_port: int = 27015) -> GSResult:
 	var raw := text.strip_edges()
 	if raw == "":
-		return DotResult.fail(DotError.CODE_INVALID, "No address.")
+		return GSResult.fail(GSError.CODE_INVALID, "No address.")
 
 	var host := raw
 	var port := default_port
@@ -71,8 +71,8 @@ static func parse(text: String, default_port: int = 27015) -> DotResult:
 		# first turns every IPv6 address into a host of `[` too.
 		var close := raw.find("]")
 		if close < 0:
-			return DotResult.fail(
-				DotError.CODE_INVALID, "Unbalanced brackets in the address.", raw
+			return GSResult.fail(
+				GSError.CODE_INVALID, "Unbalanced brackets in the address.", raw
 			)
 		host = raw.substr(1, close - 1)
 		var rest := raw.substr(close + 1)
@@ -85,16 +85,16 @@ static func parse(text: String, default_port: int = 27015) -> DotResult:
 			port = int(raw.substr(colon + 1))
 
 	if not is_plausible_host(host):
-		return DotResult.fail(
-			DotError.CODE_INVALID, "That is not a host.", "%s -> %s" % [raw, host]
+		return GSResult.fail(
+			GSError.CODE_INVALID, "That is not a host.", "%s -> %s" % [raw, host]
 		)
 
 	if port <= 0 or port > 65535:
-		return DotResult.fail(
-			DotError.CODE_INVALID, "That is not a port.", "%s -> %d" % [raw, port]
+		return GSResult.fail(
+			GSError.CODE_INVALID, "That is not a port.", "%s -> %d" % [raw, port]
 		)
 
-	return DotResult.success(make(host, port))
+	return GSResult.success(make(host, port))
 
 
 ## Whether [param host] could be a hostname or an IP address at all.
@@ -154,8 +154,8 @@ func join_address() -> String:
 	return "%s:%d" % [address, port]
 
 
-func duplicate_target() -> DotBrowserTarget:
-	var out := DotBrowserTarget.new()
+func duplicate_target() -> GSBrowserTarget:
+	var out := GSBrowserTarget.new()
 	out.address = address
 	out.port = port
 	out.query_port = query_port
@@ -178,10 +178,10 @@ func to_dictionary() -> Dictionary:
 	return out
 
 
-static func from_dictionary(data: Dictionary) -> DotResult:
+static func from_dictionary(data: Dictionary) -> GSResult:
 	var address := str(data.get("address", ""))
 	if address == "":
-		return DotResult.fail(DotError.CODE_PARSE, "A target needs an address.")
+		return GSResult.fail(GSError.CODE_PARSE, "A target needs an address.")
 
 	var out := make(address, int(data.get("port", 27015)))
 	out.query_port = int(data.get("query_port", 0))
@@ -190,12 +190,12 @@ static func from_dictionary(data: Dictionary) -> DotResult:
 
 	var named := protocol_from_name(str(data.get("protocol", "auto")))
 	if named < 0:
-		return DotResult.fail(
-			DotError.CODE_PARSE, "Unknown query protocol.", str(data.get("protocol", ""))
+		return GSResult.fail(
+			GSError.CODE_PARSE, "Unknown query protocol.", str(data.get("protocol", ""))
 		)
 	out.protocol = named as Protocol
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 const PROTOCOL_NAMES: Array[String] = ["auto", "dqp", "a2s", "dqp_web"]
@@ -210,4 +210,4 @@ static func protocol_from_name(name: String) -> int:
 
 
 func _to_string() -> String:
-	return "DotBrowserTarget(%s, %s)" % [join_address(), protocol_name()]
+	return "GSBrowserTarget(%s, %s)" % [join_address(), protocol_name()]

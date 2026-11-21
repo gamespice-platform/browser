@@ -1,4 +1,4 @@
-class_name DotBrowserA2s
+class_name GSBrowserA2s
 extends RefCounted
 
 ## The client half of A2S, the twenty-year-old query protocol.
@@ -143,20 +143,20 @@ static func parse_split_header(data: PackedByteArray) -> Dictionary:
 
 ## Joins split packets. The reassembled bytes are a complete single packet,
 ## [code]FF FF FF FF[/code] included, which is what every A2S client expects.
-static func reassemble_split(packets: Array) -> DotResult:
+static func reassemble_split(packets: Array) -> GSResult:
 	if packets.is_empty():
-		return DotResult.fail(DotError.CODE_PARSE, "No packets.")
+		return GSResult.fail(GSError.CODE_PARSE, "No packets.")
 
 	var head := parse_split_header(packets[0] as PackedByteArray)
 	if head.is_empty():
-		return DotResult.fail(DotError.CODE_PARSE, "Not a split A2S packet.")
+		return GSResult.fail(GSError.CODE_PARSE, "Not a split A2S packet.")
 
 	var total := int(head["total"])
 	var id := int(head["id"])
 
 	if total <= 0 or total > MAX_SPLIT_PACKETS:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"A split response claimed %d packets; the ceiling is %d." % [
 				total, MAX_SPLIT_PACKETS
 			]
@@ -176,8 +176,8 @@ static func reassemble_split(packets: Array) -> DotResult:
 		chunks[int(part["index"])] = part["payload"]
 
 	if chunks.size() != total:
-		return DotResult.fail(
-			DotError.CODE_TIMEOUT,
+		return GSResult.fail(
+			GSError.CODE_TIMEOUT,
 			"Incomplete split response: %d of %d." % [chunks.size(), total]
 		)
 
@@ -185,7 +185,7 @@ static func reassemble_split(packets: Array) -> DotResult:
 	for index in range(total):
 		out.append_array(chunks[index] as PackedByteArray)
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 # --- Bodies ----------------------------------------------------------------
@@ -193,10 +193,10 @@ static func reassemble_split(packets: Array) -> DotResult:
 ## Parses an [code]A2S_INFO[/code] response.
 ##
 ## The returned dictionary uses DQP's field names, not A2S's, so a
-## [DotBrowserEntry] does not care which protocol answered it.
-static func parse_info(data: PackedByteArray) -> DotResult:
+## [GSBrowserEntry] does not care which protocol answered it.
+static func parse_info(data: PackedByteArray) -> GSResult:
 	if response_type(data) != RESPONSE_INFO:
-		return DotResult.fail(DotError.CODE_PARSE, "Not an A2S_INFO response.")
+		return GSResult.fail(GSError.CODE_PARSE, "Not an A2S_INFO response.")
 
 	var reader := _Reader.new(data, 5)
 
@@ -220,8 +220,8 @@ static func parse_info(data: PackedByteArray) -> DotResult:
 	out["version"] = reader.cstring()
 
 	if not reader.ok:
-		return DotResult.fail(
-			DotError.CODE_PARSE, "The A2S_INFO response ended early."
+		return GSResult.fail(
+			GSError.CODE_PARSE, "The A2S_INFO response ended early."
 		)
 
 	# The subtraction this protocol's shape makes necessary. Clamped at zero because
@@ -257,13 +257,13 @@ static func parse_info(data: PackedByteArray) -> DotResult:
 		if edf & EDF_GAME_ID:
 			reader.skip(8)
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 ## Parses an [code]A2S_PLAYER[/code] response into DQP-shaped player rows.
-static func parse_players(data: PackedByteArray) -> DotResult:
+static func parse_players(data: PackedByteArray) -> GSResult:
 	if response_type(data) != RESPONSE_PLAYER:
-		return DotResult.fail(DotError.CODE_PARSE, "Not an A2S_PLAYER response.")
+		return GSResult.fail(GSError.CODE_PARSE, "Not an A2S_PLAYER response.")
 
 	var reader := _Reader.new(data, 5)
 	var count := reader.u8()
@@ -281,13 +281,13 @@ static func parse_players(data: PackedByteArray) -> DotResult:
 			break
 		out.append({"name": name, "score": score, "duration": duration})
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 ## Parses an [code]A2S_RULES[/code] response into [code]name -> value[/code].
-static func parse_rules(data: PackedByteArray) -> DotResult:
+static func parse_rules(data: PackedByteArray) -> GSResult:
 	if response_type(data) != RESPONSE_RULES:
-		return DotResult.fail(DotError.CODE_PARSE, "Not an A2S_RULES response.")
+		return GSResult.fail(GSError.CODE_PARSE, "Not an A2S_RULES response.")
 
 	var reader := _Reader.new(data, 5)
 	var count := reader.u16()
@@ -300,7 +300,7 @@ static func parse_rules(data: PackedByteArray) -> DotResult:
 			break
 		out[key] = value
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 static func _os_name(byte: int) -> String:

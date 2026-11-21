@@ -1,4 +1,4 @@
-class_name DotBrowserEntry
+class_name GSBrowserEntry
 extends RefCounted
 
 ## One row in a server browser: what a server said about itself, plus what asking it
@@ -29,13 +29,13 @@ const MAX_TEXT := 128
 ## Most player rows kept from one response.
 const MAX_PLAYERS_LISTED := 128
 
-var target: DotBrowserTarget = null
+var target: GSBrowserTarget = null
 
 var status: Status = Status.UNKNOWN
 
 ## The failure from the last attempt, when [member status] is not
 ## [constant Status.ONLINE].
-var error: DotError = null
+var error: GSError = null
 
 var name: String = ""
 var map: String = ""
@@ -44,7 +44,7 @@ var game_id: String = ""
 var version: String = ""
 var folder: String = ""
 
-## Humans. [b]Never humans plus bots[/b] — see [DotBrowserA2s.parse_info].
+## Humans. [b]Never humans plus bots[/b] — see [GSBrowserA2s.parse_info].
 var players: int = 0
 var bots: int = 0
 
@@ -86,8 +86,8 @@ var last_seen: int = 0
 var answered_with: String = ""
 
 
-static func of(target_: DotBrowserTarget) -> DotBrowserEntry:
-	var out := DotBrowserEntry.new()
+static func of(target_: GSBrowserTarget) -> GSBrowserEntry:
+	var out := GSBrowserEntry.new()
 	out.target = target_
 	return out
 
@@ -121,7 +121,7 @@ func is_online() -> bool:
 
 
 ## Fills from a DQP response body — the whole document, sections and all.
-func apply_dqp(body: Dictionary) -> DotResult:
+func apply_dqp(body: Dictionary) -> GSResult:
 	# An unchanged response carries the revision and nothing else. Overwriting the
 	# fields from it would blank every one of them, which is the failure mode a
 	# conditional refresh exists to avoid.
@@ -129,12 +129,12 @@ func apply_dqp(body: Dictionary) -> DotResult:
 		status = Status.ONLINE
 		last_seen = int(Time.get_unix_time_from_system())
 		answered_with = "dqp"
-		return DotResult.success(self)
+		return GSResult.success(self)
 
 	var sections: Variant = body.get("sections")
 	if typeof(sections) != TYPE_DICTIONARY:
-		return DotResult.fail(
-			DotError.CODE_PARSE, "The query response carried no sections."
+		return GSResult.fail(
+			GSError.CODE_PARSE, "The query response carried no sections."
 		)
 
 	var doc: Dictionary = sections
@@ -162,11 +162,11 @@ func apply_dqp(body: Dictionary) -> DotResult:
 	answered_with = "dqp"
 	last_seen = int(Time.get_unix_time_from_system())
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
-## Fills from [method DotBrowserA2s.parse_info]'s dictionary.
-func apply_a2s(info: Dictionary) -> DotResult:
+## Fills from [method GSBrowserA2s.parse_info]'s dictionary.
+func apply_a2s(info: Dictionary) -> GSResult:
 	_apply_info(info)
 
 	# A2S carries a port in its extra data, and it is the *game* port. If a server
@@ -183,15 +183,15 @@ func apply_a2s(info: Dictionary) -> DotResult:
 	answered_with = "a2s"
 	last_seen = int(Time.get_unix_time_from_system())
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 func apply_a2s_players(rows: Array) -> void:
 	_apply_players(rows)
 
 
-func mark_offline(err: DotError) -> void:
-	status = Status.OFFLINE if err.code == DotError.CODE_TIMEOUT else Status.REFUSED
+func mark_offline(err: GSError) -> void:
+	status = Status.OFFLINE if err.code == GSError.CODE_TIMEOUT else Status.REFUSED
 	error = err
 	ping_ms = -1
 
@@ -261,7 +261,7 @@ static func _clip(text: String) -> String:
 	return text.substr(0, MAX_TEXT)
 
 
-## A row for a list view: the keys GameSpice UI's DotServerList reads, plus a few it may grow
+## A row for a list view: the keys GameSpice UI's GSServerList reads, plus a few it may grow
 ## into. Plain data so GameSpice Browser still names nothing outside GameSpice Core. [code]players[/code]
 ## is humans; bots are their own key, for docs/design.md's reason.
 func to_row() -> Dictionary:
@@ -298,16 +298,16 @@ func to_dictionary() -> Dictionary:
 	return out
 
 
-static func from_dictionary(data: Dictionary) -> DotResult:
+static func from_dictionary(data: Dictionary) -> GSResult:
 	var raw: Variant = data.get("target")
 	if typeof(raw) != TYPE_DICTIONARY:
-		return DotResult.fail(DotError.CODE_PARSE, "An entry needs a target.")
+		return GSResult.fail(GSError.CODE_PARSE, "An entry needs a target.")
 
-	var parsed := DotBrowserTarget.from_dictionary(raw as Dictionary)
+	var parsed := GSBrowserTarget.from_dictionary(raw as Dictionary)
 	if not parsed.ok:
 		return parsed
 
-	var out := DotBrowserEntry.of(parsed.value)
+	var out := GSBrowserEntry.of(parsed.value)
 	out.name = _clip(str(data.get("name", "")))
 	out.map = _clip(str(data.get("map", "")))
 	out.game = _clip(str(data.get("game", "")))
@@ -321,7 +321,7 @@ static func from_dictionary(data: Dictionary) -> DotResult:
 		for tag in (tags_raw as Array):
 			out.tags.append(_clip(str(tag)))
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 func status_name() -> String:
@@ -339,4 +339,4 @@ func describe() -> String:
 
 
 func _to_string() -> String:
-	return "DotBrowserEntry(%s)" % describe()
+	return "GSBrowserEntry(%s)" % describe()

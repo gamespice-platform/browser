@@ -1,7 +1,7 @@
-class_name DotBrowserA2sClient
-extends DotBrowserQuery
+class_name GSBrowserA2sClient
+extends GSBrowserQuery
 
-## One A2S query in flight, pumped the same way [DotBrowserDqpClient] is.
+## One A2S query in flight, pumped the same way [GSBrowserDqpClient] is.
 ##
 ## Asks [code]A2S_INFO[/code], and optionally [code]A2S_PLAYER[/code] after it. Both
 ## are challenged — [code]A2S_INFO[/code] gained a challenge in 2020 after years of
@@ -28,7 +28,7 @@ var retries: int = 1
 var state: State = State.IDLE
 
 var _socket: PacketPeerUDP = null
-var _challenge: int = DotBrowserA2s.NO_CHALLENGE
+var _challenge: int = GSBrowserA2s.NO_CHALLENGE
 var _deadline: int = 0
 var _sent_at: int = 0
 var _attempts_left: int = 0
@@ -42,39 +42,39 @@ func query_name() -> StringName:
 	return &"a2s"
 
 
-func begin() -> DotResult:
-	if not DotPlatform.has_udp():
-		return _finish(DotResult.fail(
-			DotError.CODE_UNSUPPORTED,
+func begin() -> GSResult:
+	if not GSPlatform.has_udp():
+		return _finish(GSResult.fail(
+			GSError.CODE_UNSUPPORTED,
 			"A2S is UDP only and this platform has none. A browser build cannot "
 			+ "speak it at any price."
 		))
 
 	if target == null or target.address == "":
-		return _finish(DotResult.fail(DotError.CODE_INVALID, "No address to query."))
+		return _finish(GSResult.fail(GSError.CODE_INVALID, "No address to query."))
 
-	# A name is looked up first; see DotBrowserQuery's "Name lookup".
+	# A name is looked up first; see GSBrowserQuery's "Name lookup".
 	var looked := lookup_begin()
 	if not looked.ok:
 		return _finish(looked)
 	if str(looked.value) == "":
-		return DotResult.success(self)
+		return GSResult.success(self)
 
 	return _open(str(looked.value))
 
 
-func _open(ip: String) -> DotResult:
+func _open(ip: String) -> GSResult:
 	_socket = PacketPeerUDP.new()
 	var err := _socket.connect_to_host(ip, target.effective_query_port())
 	if err != OK:
-		return _finish(DotResult.failure(
-			DotError.from_engine(err, "could not open a socket to %s" % target.key())
+		return _finish(GSResult.failure(
+			GSError.from_engine(err, "could not open a socket to %s" % target.key())
 		))
 
 	_attempts_left = maxi(0, retries)
 	_send_info()
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 func poll(now_ms: int) -> bool:
@@ -109,11 +109,11 @@ func poll(now_ms: int) -> bool:
 			# The roster is an extra. A server that answered the info and then went
 			# quiet is still a server worth listing, and reporting it offline because
 			# the second request was dropped would be wrong about the first.
-			_finish(DotResult.success({"info": _info, "players": _players}))
+			_finish(GSResult.success({"info": _info, "players": _players}))
 			return true
 
-		_finish(DotResult.fail(
-			DotError.CODE_TIMEOUT, "The server did not answer.", target.key()
+		_finish(GSResult.fail(
+			GSError.CODE_TIMEOUT, "The server did not answer.", target.key()
 		))
 		return true
 
@@ -128,17 +128,17 @@ func close() -> void:
 
 
 func _handle(data: PackedByteArray, now_ms: int) -> bool:
-	if DotBrowserA2s.is_split(data):
+	if GSBrowserA2s.is_split(data):
 		return _handle_split(data, now_ms)
 
-	if not DotBrowserA2s.is_single(data):
+	if not GSBrowserA2s.is_single(data):
 		return false
 
 	return _handle_single(data, now_ms)
 
 
 func _handle_split(data: PackedByteArray, now_ms: int) -> bool:
-	var head := DotBrowserA2s.parse_split_header(data)
+	var head := GSBrowserA2s.parse_split_header(data)
 	if head.is_empty():
 		return false
 
@@ -157,7 +157,7 @@ func _handle_split(data: PackedByteArray, now_ms: int) -> bool:
 	if _split.size() < int(head["total"]):
 		return false
 
-	var joined := DotBrowserA2s.reassemble_split(_split)
+	var joined := GSBrowserA2s.reassemble_split(_split)
 	_split.clear()
 	_split_id = -1
 
@@ -169,10 +169,10 @@ func _handle_split(data: PackedByteArray, now_ms: int) -> bool:
 
 
 func _handle_single(data: PackedByteArray, now_ms: int) -> bool:
-	var type := DotBrowserA2s.response_type(data)
+	var type := GSBrowserA2s.response_type(data)
 
-	if type == DotBrowserA2s.RESPONSE_CHALLENGE:
-		_challenge = DotBrowserA2s.challenge_of(data)
+	if type == GSBrowserA2s.RESPONSE_CHALLENGE:
+		_challenge = GSBrowserA2s.challenge_of(data)
 		_attempts_left = maxi(0, retries)
 		if state == State.INFO:
 			_send_info()
@@ -180,18 +180,18 @@ func _handle_single(data: PackedByteArray, now_ms: int) -> bool:
 			_send_players()
 		return false
 
-	if type == DotBrowserA2s.RESPONSE_INFO:
+	if type == GSBrowserA2s.RESPONSE_INFO:
 		if ping_ms < 0:
 			ping_ms = maxi(0, now_ms - _sent_at)
 
-		var parsed := DotBrowserA2s.parse_info(data)
+		var parsed := GSBrowserA2s.parse_info(data)
 		if not parsed.ok:
 			_finish(parsed)
 			return true
 
 		_info = parsed.value
 
-		if want_players and _challenge != DotBrowserA2s.NO_CHALLENGE:
+		if want_players and _challenge != GSBrowserA2s.NO_CHALLENGE:
 			_attempts_left = maxi(0, retries)
 			_send_players()
 			return false
@@ -204,14 +204,14 @@ func _handle_single(data: PackedByteArray, now_ms: int) -> bool:
 			_send_players()
 			return false
 
-		_finish(DotResult.success({"info": _info, "players": _players}))
+		_finish(GSResult.success({"info": _info, "players": _players}))
 		return true
 
-	if type == DotBrowserA2s.RESPONSE_PLAYER:
-		var rows := DotBrowserA2s.parse_players(data)
+	if type == GSBrowserA2s.RESPONSE_PLAYER:
+		var rows := GSBrowserA2s.parse_players(data)
 		if rows.ok:
 			_players = rows.value
-		_finish(DotResult.success({"info": _info, "players": _players}))
+		_finish(GSResult.success({"info": _info, "players": _players}))
 		return true
 
 	return false
@@ -221,16 +221,16 @@ func _send_info() -> void:
 	state = State.INFO
 	_sent_at = Time.get_ticks_msec()
 	_deadline = _sent_at + timeout_ms
-	_socket.put_packet(DotBrowserA2s.build_info(_challenge))
+	_socket.put_packet(GSBrowserA2s.build_info(_challenge))
 
 
 func _send_players() -> void:
 	state = State.PLAYERS
 	_sent_at = Time.get_ticks_msec()
 	_deadline = _sent_at + timeout_ms
-	_socket.put_packet(DotBrowserA2s.build_player(_challenge))
+	_socket.put_packet(GSBrowserA2s.build_player(_challenge))
 
 
-func _finish(res: DotResult) -> DotResult:
+func _finish(res: GSResult) -> GSResult:
 	state = State.DONE
 	return finish(res)

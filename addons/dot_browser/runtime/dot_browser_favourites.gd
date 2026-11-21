@@ -1,4 +1,4 @@
-class_name DotBrowserFavourites
+class_name GSBrowserFavourites
 extends RefCounted
 
 ## A player's saved servers and where they have been, on disk.
@@ -32,7 +32,7 @@ func _init(p_path: String = DEFAULT_PATH) -> void:
 	path = p_path
 
 
-func load_from_disk() -> DotResult:
+func load_from_disk() -> GSResult:
 	_loaded = true
 	_favourites.clear()
 	_history.clear()
@@ -40,22 +40,22 @@ func load_from_disk() -> DotResult:
 	if not FileAccess.file_exists(path):
 		# Not a failure. The first run of every game reaches this, and reporting it
 		# as an error trains people to ignore the log that will one day say something.
-		return DotResult.success(0)
+		return GSResult.success(0)
 
-	var read := DotPaths.read_json(path)
+	var read := GSPaths.read_json(path)
 	if not read.ok:
-		DotLog.warn(CHANNEL, "the saved server list could not be read", {
+		GSLog.warn(CHANNEL, "the saved server list could not be read", {
 			"file": path, "error": str(read.error)
 		})
 		return read.wrap("Could not read the saved server list.")
 
 	var data: Variant = read.value
 	if typeof(data) != TYPE_DICTIONARY:
-		DotLog.warn(CHANNEL, "the saved server list is not an object", {
+		GSLog.warn(CHANNEL, "the saved server list is not an object", {
 			"file": path, "found": type_string(typeof(data))
 		})
-		return DotResult.fail(
-			DotError.CODE_PARSE, "The saved server list is not an object.", path
+		return GSResult.fail(
+			GSError.CODE_PARSE, "The saved server list is not an object.", path
 		)
 
 	var doc: Dictionary = data
@@ -68,11 +68,11 @@ func load_from_disk() -> DotResult:
 			if typeof(row) != TYPE_DICTIONARY:
 				dropped += 1
 				continue
-			var parsed := DotBrowserEntry.from_dictionary(row as Dictionary)
+			var parsed := GSBrowserEntry.from_dictionary(row as Dictionary)
 			if not parsed.ok:
 				dropped += 1
 				continue
-			var entry: DotBrowserEntry = parsed.value
+			var entry: GSBrowserEntry = parsed.value
 			_favourites[entry.key()] = entry.to_dictionary()
 			loaded += 1
 
@@ -92,23 +92,23 @@ func load_from_disk() -> DotResult:
 	# in silence means the only evidence is a favourite that is simply gone, which
 	# reads as the feature not working.
 	if dropped > 0:
-		DotLog.warn(CHANNEL, "saved servers could not be read and were dropped", {
+		GSLog.warn(CHANNEL, "saved servers could not be read and were dropped", {
 			"dropped": dropped, "kept": loaded, "file": path
 		})
 	else:
-		DotLog.debug(CHANNEL, "saved servers loaded", {
+		GSLog.debug(CHANNEL, "saved servers loaded", {
 			"favourites": loaded, "history": _history.size(), "file": path
 		})
 
-	return DotResult.success(loaded)
+	return GSResult.success(loaded)
 
 
-func save() -> DotResult:
+func save() -> GSResult:
 	var favourites: Array = []
 	for key in _favourites.keys():
 		favourites.append((_favourites[key] as Dictionary).duplicate(true))
 
-	var written := DotPaths.write_json(path, {
+	var written := GSPaths.write_json(path, {
 		"version": 1,
 		"favourites": favourites,
 		"history": _history.duplicate(true),
@@ -118,23 +118,23 @@ func save() -> DotResult:
 		# [b]ERROR, where a refused favourite would be DEBUG.[/b] Nothing was wrong
 		# with what was asked for -- the entry validated, it is in the list in memory,
 		# and this addon then failed to make that survive the process. The caller is a
-		# button somebody pressed, and the ones that exist drop this DotResult on the
+		# button somebody pressed, and the ones that exist drop this GSResult on the
 		# floor: without a line here the whole symptom is favourites that are there
 		# until the game is restarted.
-		DotLog.error(CHANNEL, "the server list could not be saved", {
+		GSLog.error(CHANNEL, "the server list could not be saved", {
 			"file": path, "favourites": favourites.size(), "error": str(written.error)
 		})
 		return written.wrap("Could not save the server list.")
 
 	# user:// on the web is an IndexedDB mirror. Without this the file exists in the
 	# tab and not in the browser's storage, and the first reload loses it.
-	DotWeb.sync_filesystem()
+	GSWeb.sync_filesystem()
 
-	return DotResult.success(favourites.size())
+	return GSResult.success(favourites.size())
 
 
 ## [b]The one caller that cannot report anything, which is why load_from_disk logs.[/b]
-## Every read path goes through here and there is nowhere for a [DotResult] to go: a
+## Every read path goes through here and there is nowhere for a [GSResult] to go: a
 ## corrupt file makes `entries()` return an empty array, and an empty array is exactly
 ## what a player with no favourites gets.
 func _ensure_loaded() -> void:
@@ -142,17 +142,17 @@ func _ensure_loaded() -> void:
 		load_from_disk()
 
 
-func add(entry: DotBrowserEntry) -> DotResult:
+func add(entry: GSBrowserEntry) -> GSResult:
 	_ensure_loaded()
 
 	if entry == null or entry.target == null:
-		return DotResult.fail(DotError.CODE_INVALID, "No server.")
+		return GSResult.fail(GSError.CODE_INVALID, "No server.")
 
 	_favourites[entry.key()] = entry.to_dictionary()
 	return save()
 
 
-func remove(key: String) -> DotResult:
+func remove(key: String) -> GSResult:
 	_ensure_loaded()
 	_favourites.erase(key)
 	return save()
@@ -168,37 +168,37 @@ func has(key: String) -> bool:
 ## [b]Targets, not results.[/b] What was saved is where a server was, not what it was
 ## doing — the player counts in the file are from whenever it was last seen and are
 ## there to draw something before the first refresh answers, not to be believed.
-func entries() -> Array[DotBrowserEntry]:
+func entries() -> Array[GSBrowserEntry]:
 	_ensure_loaded()
 
-	var out: Array[DotBrowserEntry] = []
+	var out: Array[GSBrowserEntry] = []
 	for key in _favourites.keys():
-		var parsed := DotBrowserEntry.from_dictionary(_favourites[key] as Dictionary)
+		var parsed := GSBrowserEntry.from_dictionary(_favourites[key] as Dictionary)
 		if parsed.ok:
 			out.append(parsed.value)
 
 	return out
 
 
-func targets() -> Array[DotBrowserTarget]:
-	var out: Array[DotBrowserTarget] = []
+func targets() -> Array[GSBrowserTarget]:
+	var out: Array[GSBrowserTarget] = []
 	for entry in entries():
 		out.append(entry.target)
 	return out
 
 
-## The keys, for [method DotBrowserFilter.apply_sort].
+## The keys, for [method GSBrowserFilter.apply_sort].
 func keys() -> Dictionary:
 	_ensure_loaded()
 	return _favourites.duplicate()
 
 
 ## Records that a player connected to a server.
-func note_visit(entry: DotBrowserEntry) -> DotResult:
+func note_visit(entry: GSBrowserEntry) -> GSResult:
 	_ensure_loaded()
 
 	if entry == null or entry.target == null:
-		return DotResult.fail(DotError.CODE_INVALID, "No server.")
+		return GSResult.fail(GSError.CODE_INVALID, "No server.")
 
 	var key := entry.key()
 	var row := entry.to_dictionary()
@@ -218,19 +218,19 @@ func note_visit(entry: DotBrowserEntry) -> DotResult:
 	return save()
 
 
-func history() -> Array[DotBrowserEntry]:
+func history() -> Array[GSBrowserEntry]:
 	_ensure_loaded()
 
-	var out: Array[DotBrowserEntry] = []
+	var out: Array[GSBrowserEntry] = []
 	for row in _history:
-		var parsed := DotBrowserEntry.from_dictionary(row)
+		var parsed := GSBrowserEntry.from_dictionary(row)
 		if parsed.ok:
 			out.append(parsed.value)
 
 	return out
 
 
-func clear_history() -> DotResult:
+func clear_history() -> GSResult:
 	_ensure_loaded()
 	_history.clear()
 	return save()
