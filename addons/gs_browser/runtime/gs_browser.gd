@@ -331,8 +331,9 @@ func _check_concurrency() -> GSResult:
 			GSError.CODE_INVALID, "concurrency %d is negative; 0 means unlimited." % concurrency
 		)
 	if concurrency > CONCURRENCY_WARN or concurrency == 0:
-		push_warning("GSBrowser: concurrency %s sends a burst of UDP that can look like a scan and lose replies." % (
-			"unlimited" if concurrency == 0 else str(concurrency)))
+		GSLog.warn(CHANNEL, "this concurrency sends a burst of UDP that can look like a scan and lose replies", {
+			"concurrency": "unlimited" if concurrency == 0 else str(concurrency)
+		})
 	return GSResult.success(null)
 
 
