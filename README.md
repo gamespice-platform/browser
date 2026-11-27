@@ -2,6 +2,8 @@
 
 A server browser for Godot 4.7+: a query client and a list model. It asks game servers what they are, then gives you sources, filters, sorting, favourites and history. Part of the [GameSpice](https://github.com/gamespice-platform) family. It needs only [GameSpice Core](https://github.com/gamespice-platform/core).
 
+GameSpice Browser is a GameSpice addon, MIT licensed and built with Claude Code. Test it headless with `res://examples/browser_selftest.tscn`. The games in [Zee's Games](https://zeesgames.com) are built on the GameSpice addons and run on live servers, which are what its lists show.
+
 It speaks three protocols, so one browser can list any server:
 
 | Protocol | Used for |
@@ -81,9 +83,17 @@ godot --headless --path . res://examples/browser_selftest.tscn
 
 The self-test includes a real query over a loopback socket and exits non-zero on any failure. The design is in [docs/design.md](docs/design.md).
 
-## Status
+## Used by
 
-Built and maintained with Claude Code. The test suites pass, but little of this has been in front of real players yet. Please report rough edges by opening an issue.
+These games vendor it:
+
+- [Fatal Contact](https://zeesgames.com/fatal-contact)
+- [Airdrift](https://zeesgames.com/airdrift) - the in-game server list
+- [Playlot](https://zeesgames.com/playlot)
+- [Hungario](https://zeesgames.com/hungario)
+- [Zombie Zone](https://zeesgames.com/zombie-zone)
+
+The whole collection is at [zeesgames.com](https://zeesgames.com).
 
 ## Licence
 
